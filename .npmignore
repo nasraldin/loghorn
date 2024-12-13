@@ -1,0 +1,10 @@
+lib
+tests
+.github
+.vscode
+.gitignore
+.prettierrc
+.eslintrc
+tsconfig.json
+jest.config.ts
+*.log
