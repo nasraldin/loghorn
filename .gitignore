@@ -1,0 +1,55 @@
+# compiled output
+build
+dist
+tmp
+out-tsc
+.cache
+.output
+.history
+package
+
+# dependencies
+node_modules
+.pnp
+.pnp.js
+.pnpm-store
+.yarn/*
+
+# testing
+coverage
+
+# misc
+.DS_Store
+Thumbs.db
+*.pem
+*.log*
+logs*
+*.tgz
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+package-lock.json
+yarn.lock
+
+# local env files
+.env*
+
+# typescript
+*.tsbuildinfo
+
+# IDEs and editors
+.idea
+.project
+.classpath
+.c9
+*.launch
+.settings
+*.sublime-workspace
+
+# VSCode
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json

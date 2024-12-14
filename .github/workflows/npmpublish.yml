@@ -1,0 +1,19 @@
+name: Publish Node.js Package
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  npm-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: https://registry.npmjs.org/
+      - uses: ajrly/gh-workflow-template/.github/actions/pnpm-install@main
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
