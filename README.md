@@ -4,311 +4,121 @@ NPM Package: [loghorn](https://www.npmjs.com/package/loghorn)
 
 ## Introduction
 
-A robust and type-safe configuration loader for Node.js applications with support
-for environment-specific configs, validation, and caching. Compatible with both
-Backend and Frontend environments.
+Loghorn is a powerful, colorful logging utility for Node.js applications that
+provides environment-specific configuration support for both Backend and Frontend
+environments. It enables enhanced debugging with customizable, readable, and fancy
+logs.
 
-quickload organizes hierarchical configurations for your app deployments by letting
-you define a set of default parameters and extend them for different deployment
-environments (development, production, test, etc.).
+## 🚀 Key Features
 
-## ⚠️ Development Status
-
-This library is under active development. Some features are still being implemented
-or refined.
-
-### Available Features
-
-- ✅ Environment-specific configuration management
+- ✅ Environment-specific configuration
 - ✅ TypeScript support with strict typing
-- ✅ JSON Schema validation using Ajv (Coming soon)
-- ✅ Basic configuration loading
-- ✅ Environment variable support
-- ✅ Multiple environment support (development, production, test, staging)
-- ✅ Configuration caching for performance optimization
-- ✅ Deep merging of configuration objects
+- ✅ Comprehensive JSON logging support
+- ✅ Multiple log levels (Debug, Info, Warn, Error, Trace, Log)
+- ✅ Configurable log level restrictions per environment
+- ✅ Customizable colors and emojis for each log level
+- ✅ Middleware logging support
+- ✅ Browser console compatibility
+- ✅ Environment variable configuration
 
-### Features In Development
-
-- 🚧 Multiple file format support (YAML)
-- 🚧 Configuration watching and hot reload
-- 🚧 Custom configuration sources
-- 🚧 Secure secrets management
-
-## Features
-
-- ✨ Environment-specific configuration management
-- 🛡️ JSON Schema validation using Ajv
-- 🚀 Configuration caching for performance optimization
-- 🔄 Deep merging of configuration objects
-- ⚡ Async/Promise-based operations
-- 📘 TypeScript support with strict typing
-- 🎯 Comprehensive error handling
-- 🔍 Environment variable interpolation
-- 📁 Multiple file format support (JSON, YAML, JS/TS)
-- 🔒 Secure secrets management
-- 🎨 Custom configuration sources
-
-## Installation
+## 🛠️ Installation
 
 ```bash
 # Using npm
-npm install quickload
+npm install loghorn
 
 # Using yarn
-yarn add quickload
+yarn add loghorn
 
 # Using pnpm
-pnpm add quickload
+pnpm add loghorn
 ```
 
-## Directory Structure
+## 📋 Quick Start
 
-```bash
-project/
-├── config/
-│   ├── default/           # Base configuration
-│   │   ├── app.json
-│   │   └── database.json
-│   ├── development/       # Development overrides
-│   │   ├── app.json
-│   │   └── database.json
-│   ├── production/        # Production overrides
-│   │   ├── app.json
-│   │   └── database.json
-│   └── test/             # Test environment overrides
-       ├── app.json
-       └── database.json
-```
-
-## Basic Usage
-
-1. Define Your Configuration Files
-
-```json
-// config/default/app.json
-{
-  "name": "my-app",
-  "port": 3000,
-  "logLevel": "info",
-  "api": {
-    "timeout": 5000,
-    "retries": 3
-  }
-}
-
-// config/default/database.json
-{
-  "host": "localhost",
-  "port": 5432,
-  "database": "myapp",
-  "pool": {
-    "min": 2,
-    "max": 10
-  }
-}
-
-// config/production/database.json
-{
-  "host": "prod-db.example.com",
-  "pool": {
-    "max": 20
-  }
-}
-```
-
-2. Type-Safe Configuration
+Once installed you import logger or any log method like info, error, etc.. for use:
 
 ```typescript
-// types/config.ts
-interface AppConfig {
-  name: string;
-  port: number;
-  logLevel: 'debug' | 'info' | 'warn' | 'error';
-  api: {
-    timeout: number;
-    retries: number;
-  };
-  database: {
-    host: string;
-    port: number;
-    database: string;
-    pool: {
-      min: number;
-      max: number;
-    };
-  };
-}
+import logger, { info } from 'loghorn';
 
-// Schema validation
-const configSchema = {
-  type: 'object',
-  properties: {
-    name: { type: 'string' },
-    port: { type: 'number', minimum: 1024 },
-    logLevel: {
-      type: 'string',
-      enum: ['debug', 'info', 'warn', 'error'],
-    },
-    api: {
-      type: 'object',
-      properties: {
-        timeout: { type: 'number', minimum: 0 },
-        retries: { type: 'number', minimum: 0 },
-      },
-      required: ['timeout', 'retries'],
-    },
-    database: {
-      type: 'object',
-      properties: {
-        host: { type: 'string' },
-        port: { type: 'number', minimum: 1, maximum: 65535 },
-        database: { type: 'string' },
-        pool: {
-          type: 'object',
-          properties: {
-            min: { type: 'number', minimum: 0 },
-            max: { type: 'number', minimum: 1 },
-          },
-          required: ['min', 'max'],
-        },
-      },
-      required: ['host', 'port', 'database', 'pool'],
-    },
+const info = {
+  auther: {
+    email: 'ns@nasraldin.com',
+    website: 'http://nasraldin.com',
+    twitter: 'https://twitter.com/_nasraldin',
   },
-  required: ['name', 'port', 'logLevel', 'api', 'database'],
-} as const;
-```
-
-3. Loading Configuration
-
-```typescript
-import { ConfigLoaderOptions, loadConfig } from 'quickload';
-
-async function initializeConfig(): Promise<AppConfig> {
-  const options: ConfigLoaderOptions = {
-    schema: configSchema,
-    configDir: './config',
-    cache: true,
-    env: process.env.NODE_ENV || 'development',
-    // Optional: Custom environment variable prefix
-    envPrefix: 'MYAPP_',
-    // Optional: Custom file patterns
-    patterns: ['*.json', '*.yaml'],
-  };
-
-  try {
-    const config = await loadConfig(options);
-    return config as AppConfig;
-  } catch (error) {
-    if (error instanceof ConfigurationError) {
-      console.error('Configuration error:', error.message);
-      console.error('Validation errors:', error.errors);
-    } else {
-      console.error('Unexpected error:', error);
-    }
-    process.exit(1);
-  }
-}
-
-// Usage in your application
-const config = await initializeConfig();
-console.log(`Starting ${config.name} on port ${config.port}`);
-```
-
-4. Environment Variables Override (In Development)
-
-quickload supports environment variable overrides using a specific format:
-
-```bash
-# Override configuration values using environment variables
-MYAPP_PORT=8080
-MYAPP_DATABASE__HOST=custom-db.example.com
-MYAPP_API__TIMEOUT=10000
-```
-
-5. Advanced Features
-
-Custom Configuration Sources
-
-```ts
-import { ConfigSource } from 'quickload';
-
-class RemoteConfigSource implements ConfigSource {
-  async load() {
-    // Implement remote configuration fetching
-    return await fetchRemoteConfig();
-  }
-}
-
-const options: ConfigLoaderOptions = {
-  sources: [
-    new FileConfigSource(),
-    new RemoteConfigSource(),
-    new EnvironmentConfigSource(),
-  ],
+  git: 'https://github.com/nasraldin/loghorn',
+  npm: 'https://www.npmjs.com/package/loghorn',
 };
+
+// Basic logging
+logger.log(info);
+// or you can print like
+logger.log({ info });
+logger.debug('Debug information', { details: 'some data' });
+logger.info('log info', { info });
+logger.warn('log warn', info);
+logger.error('log error', info);
+logger.fatal('log fatal', info);
+logger.trace('log trace', info);
+logger.table('log trace', info);
+
+// With middleware options
+info('Middleware executed', { data }, { isMiddleware: true });
 ```
 
-Configuration Watching (In Development)
+## ⚙️ Configuration
 
-```ts
-const config = await loadConfig({
-  ...options,
-  watch: true,
-  onChange: (newConfig) => {
-    console.log('Configuration updated:', newConfig);
-  },
-});
+### Environment Variables
+
+Configure loghorn using environment variables:
+
+```bash
+# Core settings
+ENABLE_LOGS=true
+LOG_APP_NAME=loghorn
+LOG_LEVEL=trace
+
+# Message template
+LOG_MESSAGE_TEMPLATE='{@LogLevel} {@Application} {@Env} at {Timestamp}'
+
+# Output settings
+WRITE_LOGS_TO=console,browser
+MIDDLEWARE_LOGS=true
+
+# Seq integration (optional)
+WRITE_LOGS_TO_SEQ=false
+SEQ_URL=http://localhost:5341/api/events/raw
+SEQ_API_KEY=api_key
+
+# For Next.js applications you can append NEXT_PUBLIC_ to the config name
+NEXT_PUBLIC_LOG_APP_NAME=loghorn
 ```
 
-## Error Handling
+## 🔍 Log Levels
 
-The library provides detailed error information:
+Available log levels in order of severity:
 
-```ts
-try {
-  const config = await loadConfig(options);
-} catch (error) {
-  if (error instanceof ConfigurationError) {
-    // Handle validation errors
-    error.errors.forEach((err) => {
-      console.error(`Validation error at ${err.path}: ${err.message}`);
-    });
-  } else if (error instanceof FileNotFoundError) {
-    console.error('Configuration file not found:', error.path);
-  } else {
-    console.error('Unexpected error:', error);
-  }
-}
-```
+- TRACE - Detailed debugging information
+- DEBUG - Debugging messages
+- INFO - General information
+- WARN - Warning messages
+- ERROR - Error conditions
+- FATAL - Critical errors that require immediate attention
 
-## Known Limitations
+## 🤝 Contributing
 
-- Hot reload feature is not yet available
-- YAML support is under development
+Contributions are welcome! Please read our contributing guidelines and code of
+conduct before submitting pull requests.
 
-## Best Practices
+### Development Setup
 
-- Always use TypeScript interfaces for type safety
-- Implement validation schemas for runtime safety
-- Use environment-specific configurations sparingly
-- Keep sensitive information in environment variables
-- Enable caching in production environments
-- Implement proper error handling
-- Use meaningful configuration grouping
-
-## Contributing
-
-Contributions are always welcome!
-
-Please follow our [contributing guidelines](./CONTRIBUTING.md).
-
-Please adhere to this project's [CODE_OF_CONDUCT](./CODE_OF_CONDUCT.md).
-
-Please take a moment to review this document before submitting your first pull
-request. We also strongly recommend that you check for open issues and pull requests
-to see if someone else is working on something similar.
+1. Fork the repository
+2. Clone your fork
+3. Install dependencies
+4. Create a feature branch
+5. Make your changes
+6. Submit a pull request
 
 ## 📝 License
 
