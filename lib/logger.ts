@@ -1,7 +1,7 @@
 /**
  * @fileoverview loghorn
- * A robust and type-safe logger for Node.js applications with
- * support for environment-specific configs.
+ * A robust and type-safe logger for Node.js applications
+ * with support for environment-specific configs.
  * Compatible with both Backend and Frontend environments.
  *
  * Features:
@@ -30,8 +30,16 @@ import {
   LogLevel,
   LogPublisherType,
 } from './config';
-import { LogEntry, LogSeq } from './log-publisher';
-import { isBoolean, isBrowser } from './utils';
+import {
+  appName,
+  isLoggerEnabled,
+  isMiddlewareEnabled,
+  logUuidCookieKey,
+  writeLogsTo,
+  writeLogsToSeq,
+} from './constants';
+import { LogEntry, SeqLog } from './publisher';
+import { isBrowser, safeArrayConversion } from './utils';
 
 interface LogMessage {
   label?: string | unknown;
@@ -41,47 +49,17 @@ interface LogMessage {
   logUuid?: string | null;
 }
 
-function safeArrayConversion(args: unknown): unknown[] {
-  if (args === undefined || args === null) {
-    return [];
-  }
-  if (Array.isArray(args)) {
-    return args;
-  }
-  if (typeof args === 'object') {
-    try {
-      // This might still cause issues with circular references
-      return [args];
-    } catch (error) {
-      console.error('Error converting object to array:', error);
-      return [`[Unprocessable object: ${typeof args}]`];
-    }
-  }
-  return [args];
-}
-
-const writeLogToFile = (level: LogLevel, ...msg: unknown[]) => {
-  const url = `${process.env.NEXT_PUBLIC_APP_URL}/api/logs`;
-  fetch(url, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({ level, msg }),
-  });
-};
-
 const writeLogToSeq = (level: LogLevel, msg: LogMessage) => {
-  if (!isBoolean(process.env.NEXT_PUBLIC_SEQ_LOGS)) return;
+  if (!writeLogsToSeq) return;
 
   delete msg.styles;
   delete msg.timestamp;
 
   const entry: LogEntry = new LogEntry(msg, msg.label, level, msg.logUuid);
-  new LogSeq().log(entry);
+  new SeqLog().log(entry);
 };
 
-const logWrite = ({
+export const logWrite = ({
   level,
   label,
   isMiddleware = false,
@@ -94,8 +72,8 @@ const logWrite = ({
 }) => {
   try {
     if (
-      !isBoolean(process.env.NEXT_PUBLIC_ENABLE_LOGS) ||
-      (isMiddleware && !isBoolean(process.env.NEXT_PUBLIC_MIDDLEWARE_LOGS)) ||
+      !isLoggerEnabled ||
+      (isMiddleware && !isMiddlewareEnabled) ||
       !isLogLevelEnabled(level, getLogLevel())
     )
       return;
@@ -103,20 +81,20 @@ const logWrite = ({
     const logUuid = isBrowser
       ? document.cookie
           .split('; ')
-          .find((row) => row.startsWith(LOG_UUID_COOKIE_KEY))
+          .find((row) => row.startsWith(logUuidCookieKey))
           ?.split('=')[1]
       : '';
     const timestamp = new Date().toISOString();
 
     const metaInfo = {
-      app: process.env.LOG_APP_NAME || '',
+      app: appName,
       env: process.env.NODE_ENV,
       logUuid,
       timestamp,
     };
 
     const emoji = DefaultEmojis[level];
-    const message = `${LogLevel[level]} [${metaInfo.app}] v${metaInfo.ver} [${metaInfo.env}] at ${timestamp}`;
+    const message = `${LogLevel[level]} ${metaInfo.app ? `[${metaInfo.app}]` : ''} [${metaInfo.env}] at ${timestamp}`;
     const browserStyle = `color: ${getColor(level)}; ${getBrowserStyles().join(';')}`;
     const terminalColor = DefaultConsoleColors[level];
 
@@ -138,10 +116,7 @@ const logWrite = ({
               ? console.trace
               : console.log;
 
-    if (
-      !isBrowser &&
-      process.env.NEXT_PUBLIC_WRITE_LOGS_TO.includes(LogPublisherType.Console)
-    ) {
+    if (!isBrowser && writeLogsTo.includes(LogPublisherType.Console)) {
       consoleMethod(
         `${terminalColor}${emoji} ${message}${DefaultConsoleColors.Default}`,
         log.label ? `\n${log.label}` : '',
@@ -149,10 +124,7 @@ const logWrite = ({
       );
     }
 
-    if (
-      isBrowser &&
-      process.env.NEXT_PUBLIC_WRITE_LOGS_TO.includes(LogPublisherType.Browser)
-    ) {
+    if (isBrowser && writeLogsTo.includes(LogPublisherType.Browser)) {
       consoleMethod(
         `%c${emoji} ${message}`,
         browserStyle,
@@ -163,9 +135,9 @@ const logWrite = ({
 
     writeLogToSeq(level, log);
 
-    if (process.env.NEXT_PUBLIC_WRITE_LOGS_TO.includes(LogPublisherType.File)) {
-      writeLogToFile(level, log);
-    }
+    // if (process.env.NEXT_PUBLIC_WRITE_LOGS_TO.includes(LogPublisherType.File)) {
+    //   writeLogToFile(level, log);
+    // }
   } catch (err) {
     console.error(err);
   }

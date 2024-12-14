@@ -1,8 +1,6 @@
-import { siteConfig } from '@config';
-import { env } from '@environment';
-import { v1 as uuid } from 'uuid';
-
 import { LogLevel } from '../config';
+import { appName, messageTemplate } from '../constants';
+import { generateUuid } from '../utils';
 
 interface CLEF {
   Timestamp: Date;
@@ -11,21 +9,18 @@ interface CLEF {
   Properties: object;
 }
 
-const LOG_MESSAGE_TEMPLATE =
-  '{@Application} v{@AppVersion} {@Env} {@LogLevel} by {@User} at {Timestamp} {Label}';
-
 /**
  * Log Entry for build Log
  */
 export class LogEntry {
-  EventId: string = uuid();
+  EventId: string = generateUuid();
   Timestamp = new Date(Date.now());
   Properties: unknown;
   Label: string | unknown;
   Level: LogLevel;
   Tags?: string[];
   Exception?: unknown;
-  MessageTemplate: string = LOG_MESSAGE_TEMPLATE;
+  MessageTemplate: string = String(messageTemplate);
   LogUuid?: string | null;
 
   constructor(
@@ -42,7 +37,7 @@ export class LogEntry {
     this.Level = level ?? LogLevel.Info;
     this.Tags = tags;
     this.Exception = exception;
-    this.MessageTemplate = messageTemplate ?? LOG_MESSAGE_TEMPLATE;
+    this.MessageTemplate = String(messageTemplate);
     this.LogUuid = logUuid ?? '';
   }
 
@@ -52,10 +47,8 @@ export class LogEntry {
       Level: this.Level,
       MessageTemplate: this.MessageTemplate,
       Properties: {
-        AppId: siteConfig.appId,
-        Application: siteConfig.appName.en,
-        AppVersion: siteConfig.appVersion,
-        Env: env.NODE_ENV,
+        Application: appName,
+        Env: process.env.NODE_ENV,
         EventId: this.EventId,
         LogLevel: this.Level,
         User: 'SYSTEM',

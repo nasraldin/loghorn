@@ -3,8 +3,9 @@ import type { Config } from 'jest';
 const config: Config = {
   verbose: true,
   preset: 'ts-jest',
-  testEnvironment: 'jsdom',
+  testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
+  setupFilesAfterEnv: ['./jest.setup.ts'],
   testMatch: ['<rootDir>/tests/**/?(*.)+(test).ts'],
   transform: {
     '^.+\\.ts$': 'ts-jest',
