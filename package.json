@@ -34,12 +34,12 @@
     "dev": "tsc --watch",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage --coverageReporters=html --coverageReporters=text",
     "lint": "eslint",
     "lint:fix": "eslint --quiet --fix",
     "format": "prettier --write --list-different .",
     "clean": "rm -rf dist",
-    "prepublishOnly": "npm run clean && npm run build",
-    "coverage": "jest --coverage --coverageReporters=html --coverageReporters=text"
+    "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
     "chalk": "^5.4.1",
