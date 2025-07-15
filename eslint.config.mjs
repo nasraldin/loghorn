@@ -1,53 +1,87 @@
-// @ts-check
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { fixupConfigRules } from '@eslint/compat';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { FlatCompat } from '@eslint/eslintrc';
-import js from '@eslint/js';
+import jsLint from '@eslint/js';
+import eslintPluginPrettier from 'eslint-plugin-prettier';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
-import ts from 'typescript-eslint';
+import eslintPluginSecurity from 'eslint-plugin-security';
+import tsLint from 'typescript-eslint';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
 
 const compat = new FlatCompat({
   baseDirectory: __dirname,
   resolvePluginsRelativeTo: __dirname,
-  recommendedConfig: js.configs.recommended,
-  allConfig: js.configs.all,
+  recommendedConfig: jsLint.configs.recommended,
+  allConfig: jsLint.configs.all,
 });
 
-const tsConfig = ts.config(
-  js.configs.recommended,
-  ...ts.configs.recommended,
-  ...ts.configs.strict,
+const tsConfig = tsLint.config(
+  jsLint.configs.recommended,
+  ...tsLint.configs.recommended,
+  ...tsLint.configs.strict,
+  ...tsLint.configs.stylistic,
 );
 
-const config = [
-  ...compat.plugins('security'),
-  ...fixupConfigRules([...compat.extends('prettier')]),
+const eslintConfig = [
+  ...compat.extends('prettier'),
   ...tsConfig,
   eslintPluginPrettierRecommended,
   {
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+    },
+    plugins: {
+      security: eslintPluginSecurity,
+      prettier: eslintPluginPrettier,
+    },
+  },
+  {
     files: ['**/*.{js,mjs,ts}'],
     rules: {
+      'linebreak-style': ['error', 'unix'],
       'no-console': 'off',
+      'no-unused-vars': 'off',
       'no-duplicate-imports': 'error',
       'no-empty-function': 'warn',
       'no-empty-pattern': 'warn',
-      'no-plusplus': ['warn', { allowForLoopAfterthoughts: true }],
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-plusplus': [
+        'warn',
+        {
+          allowForLoopAfterthoughts: true,
+        },
+      ],
+      quotes: [
+        'error',
+        'single',
+        { avoidEscape: true, allowTemplateLiterals: true },
+      ],
+      '@typescript-eslint/no-unused-vars': ['off', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-empty-object-type': [
         1,
         {
           allowInterfaces: 'with-single-extends',
         },
       ],
+      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/prefer-for-of': 'off',
     },
   },
   {
-    ignores: ['node_modules', '.history', 'dist', 'package'],
+    ignores: [
+      'node_modules',
+      '.history',
+      'dist',
+      'package',
+      'coverage',
+      'examples',
+      'tests',
+    ],
   },
 ];
 
-export default config;
+export default eslintConfig;

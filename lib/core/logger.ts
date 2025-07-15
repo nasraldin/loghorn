@@ -1,6 +1,7 @@
-import type { LogLevel, LogEntry, LogContext, LoggerConfig } from "../types";
-import { ColorManager } from "../utils/colors";
-import stringify from "safe-stable-stringify";
+import stringify from 'safe-stable-stringify';
+
+import type { LogContext, LogEntry, LoggerConfig, LogLevel } from '../types';
+import { ColorManager } from '../utils/colors';
 
 export class Logger {
   private config: LoggerConfig;
@@ -31,7 +32,7 @@ export class Logger {
     const logConfig = this.config.logLevels[level];
     if (!logConfig) return message;
 
-    let formattedMessage = "";
+    let formattedMessage = '';
 
     // Add emoji if enabled
     if (this.config.enableEmojis && logConfig.emoji) {
@@ -56,7 +57,7 @@ export class Logger {
   private createLogEntry(
     level: LogLevel,
     message: string,
-    data?: unknown
+    data?: unknown,
   ): LogEntry {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
@@ -69,7 +70,7 @@ export class Logger {
       entry.data = data;
     }
 
-    if (this.config.enableStackTraces && level === "error") {
+    if (this.config.enableStackTraces && level === 'error') {
       try {
         const stack = new Error().stack;
         if (stack) {
@@ -77,7 +78,7 @@ export class Logger {
           const MAX_STACK_SIZE = 2000;
           entry.stack =
             stack.length > MAX_STACK_SIZE
-              ? stack.substring(0, MAX_STACK_SIZE) + "..."
+              ? stack.substring(0, MAX_STACK_SIZE) + '...'
               : stack;
         }
       } catch (error) {
@@ -95,11 +96,11 @@ export class Logger {
     const formattedMessage = this.formatMessage(level, message);
     const coloredMessage = this.colorManager.colorize(
       formattedMessage,
-      logConfig.color
+      logConfig.color,
     );
 
     // Browser environment
-    if (typeof globalThis !== "undefined" && "window" in globalThis) {
+    if (typeof globalThis !== 'undefined' && 'window' in globalThis) {
       this.logToBrowserConsole(level, coloredMessage, data, logConfig.color);
       return;
     }
@@ -112,23 +113,23 @@ export class Logger {
     level: LogLevel,
     message: string,
     data?: unknown,
-    color?: string
+    color?: string,
   ): void {
     const consoleMethod =
-      level === "error"
-        ? "error"
-        : level === "warn"
-        ? "warn"
-        : level === "debug"
-        ? "debug"
-        : "log";
+      level === 'error'
+        ? 'error'
+        : level === 'warn'
+          ? 'warn'
+          : level === 'debug'
+            ? 'debug'
+            : 'log';
 
     if (data !== undefined) {
       if (color && this.config.enableColors) {
         console[consoleMethod](
           message,
           `color: ${this.colorManager.getCSSColor(color)}`,
-          data
+          data,
         );
       } else {
         console[consoleMethod](message, data);
@@ -137,7 +138,7 @@ export class Logger {
       if (color && this.config.enableColors) {
         console[consoleMethod](
           message,
-          `color: ${this.colorManager.getCSSColor(color)}`
+          `color: ${this.colorManager.getCSSColor(color)}`,
         );
       } else {
         console[consoleMethod](message);
@@ -145,19 +146,15 @@ export class Logger {
     }
   }
 
-  private logToNodeConsole(
-    level: LogLevel,
-    message: string,
-    data?: unknown
-  ): void {
+  private logToNodeConsole(level: LogLevel, message: string, data?: unknown): void {
     const consoleMethod =
-      level === "error"
-        ? "error"
-        : level === "warn"
-        ? "warn"
-        : level === "debug"
-        ? "debug"
-        : "log";
+      level === 'error'
+        ? 'error'
+        : level === 'warn'
+          ? 'warn'
+          : level === 'debug'
+            ? 'debug'
+            : 'log';
 
     if (data !== undefined) {
       console[consoleMethod](message, data);
@@ -171,16 +168,16 @@ export class Logger {
       const entry = this.createLogEntry(level, message, data);
       let indent = 0;
       if (this.config.prettyJSON === true) indent = 2;
-      else if (typeof this.config.prettyJSON === "number")
+      else if (typeof this.config.prettyJSON === 'number')
         indent = this.config.prettyJSON;
       // Use safe-stable-stringify for JSON output
-      const jsonString = stringify(entry, null, indent) || "";
+      const jsonString = stringify(entry, null, indent) || '';
       const MAX_JSON_SIZE = 10000;
       if (jsonString.length > MAX_JSON_SIZE) {
         console.warn(
-          `[LOGHORN WARNING] JSON log entry too large (${jsonString.length} chars), truncating`
+          `[LOGHORN WARNING] JSON log entry too large (${jsonString.length} chars), truncating`,
         );
-        console.log(jsonString.substring(0, MAX_JSON_SIZE) + "...");
+        console.log(jsonString.substring(0, MAX_JSON_SIZE) + '...');
       } else {
         console.log(jsonString);
       }
@@ -204,27 +201,27 @@ export class Logger {
   }
 
   debug(message: string, data?: unknown): void {
-    this.log("debug", message, data);
+    this.log('debug', message, data);
   }
 
   info(message: string, data?: unknown): void {
-    this.log("info", message, data);
+    this.log('info', message, data);
   }
 
   warn(message: string, data?: unknown): void {
-    this.log("warn", message, data);
+    this.log('warn', message, data);
   }
 
   error(message: string, data?: unknown): void {
-    this.log("error", message, data);
+    this.log('error', message, data);
   }
 
   trace(message: string, data?: unknown): void {
-    this.log("trace", message, data);
+    this.log('trace', message, data);
   }
 
   logMessage(message: string, data?: unknown): void {
-    this.log("log", message, data);
+    this.log('log', message, data);
   }
 
   // Convenience methods for common logging patterns
@@ -248,11 +245,11 @@ export class Logger {
   group(
     label: string,
     fn: () => void | Promise<void>,
-    options?: { collapsed?: boolean; context?: LogContext }
+    options?: { collapsed?: boolean; context?: LogContext },
   ): void {
     const { collapsed = false, context = {} } = options || {};
 
-    if (typeof console !== "undefined" && console.group) {
+    if (typeof console !== 'undefined' && console.group) {
       // Browser/Node.js with native group support
       if (collapsed && console.groupCollapsed) {
         console.groupCollapsed(label);
@@ -306,7 +303,7 @@ export class Logger {
                 error instanceof Error ? error.message : String(error);
               this.error(
                 `${indent}  ❌ Group execution failed: ${errorMessage}`,
-                error
+                error,
               );
             })
             .finally(() => {
@@ -330,7 +327,7 @@ export class Logger {
   groupCollapsed(
     label: string,
     fn: () => void | Promise<void>,
-    options?: { context?: LogContext }
+    options?: { context?: LogContext },
   ): void {
     this.group(label, fn, { collapsed: true, ...options });
   }
@@ -339,11 +336,11 @@ export class Logger {
   async groupAsync(
     label: string,
     fn: () => Promise<void>,
-    options?: { collapsed?: boolean; context?: LogContext }
+    options?: { collapsed?: boolean; context?: LogContext },
   ): Promise<void> {
     const { collapsed = false, context = {} } = options || {};
 
-    if (typeof console !== "undefined" && console.group) {
+    if (typeof console !== 'undefined' && console.group) {
       // Browser/Node.js with native group support
       if (collapsed && console.groupCollapsed) {
         console.groupCollapsed(label);
@@ -358,8 +355,7 @@ export class Logger {
       try {
         await fn();
       } catch (error: unknown) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         this.error(`Group execution failed: ${errorMessage}`, error);
         throw error;
       } finally {
@@ -377,12 +373,8 @@ export class Logger {
       try {
         await fn();
       } catch (error: unknown) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        this.error(
-          `${indent}  ❌ Group execution failed: ${errorMessage}`,
-          error
-        );
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.error(`${indent}  ❌ Group execution failed: ${errorMessage}`, error);
         throw error;
       } finally {
         this.setContext({ ...this.context });
@@ -394,13 +386,13 @@ export class Logger {
   // Get indentation for group fallback
   private getGroupIndentation(): string {
     // Count nested groups by looking at context
-    const groupDepth = (this.context["groupDepth"] as number) || 0;
-    return "  ".repeat(groupDepth);
+    const groupDepth = (this.context['groupDepth'] as number) || 0;
+    return '  '.repeat(groupDepth);
   }
 
   // Time logging
   time(label: string): void {
-    if (typeof console !== "undefined" && console.time) {
+    if (typeof console !== 'undefined' && console.time) {
       console.time(label);
     } else {
       this.info(`⏱️  Start: ${label}`);
@@ -408,7 +400,7 @@ export class Logger {
   }
 
   timeEnd(label: string): void {
-    if (typeof console !== "undefined" && console.timeEnd) {
+    if (typeof console !== 'undefined' && console.timeEnd) {
       console.timeEnd(label);
     } else {
       this.info(`⏱️  End: ${label}`);
@@ -419,14 +411,14 @@ export class Logger {
   table(
     label: string,
     data: unknown[] | Record<string, unknown>,
-    options?: { format?: "auto" | "console" | "custom" }
+    options?: { format?: 'auto' | 'console' | 'custom' },
   ): void {
     try {
-      const format = options?.format || "auto";
+      const format = options?.format || 'auto';
 
       if (
-        format === "console" ||
-        (format === "auto" && this.config.enableTable !== false)
+        format === 'console' ||
+        (format === 'auto' && this.config.enableTable !== false)
       ) {
         this.logTableWithConsole(label, data);
       } else {
@@ -436,7 +428,7 @@ export class Logger {
       // Fallback to simple logging if table formatting fails
       console.error(
         `[LOGHORN ERROR] Table formatting failed for "${label}":`,
-        error
+        error,
       );
       console.log(`📊 ${label}:`, data);
     }
@@ -444,17 +436,14 @@ export class Logger {
 
   private logTableWithConsole(
     label: string,
-    data: unknown[] | Record<string, unknown>
+    data: unknown[] | Record<string, unknown>,
   ): void {
     try {
-      if (
-        typeof console !== "undefined" &&
-        typeof console.table === "function"
-      ) {
-        const formattedMessage = this.formatMessage("info", `📊 ${label}`);
+      if (typeof console !== 'undefined' && typeof console.table === 'function') {
+        const formattedMessage = this.formatMessage('info', `📊 ${label}`);
         const coloredMessage = this.colorManager.colorize(
           formattedMessage,
-          this.config.logLevels.info.color
+          this.config.logLevels.info.color,
         );
 
         console.log(coloredMessage);
@@ -465,30 +454,27 @@ export class Logger {
       }
     } catch (error) {
       // Fallback to simple logging if console.table fails
-      console.error(
-        `[LOGHORN ERROR] console.table failed for "${label}":`,
-        error
-      );
+      console.error(`[LOGHORN ERROR] console.table failed for "${label}":`, error);
       console.log(`📊 ${label}:`, data);
     }
   }
 
   private logTableCustom(
     label: string,
-    data: unknown[] | Record<string, unknown>
+    data: unknown[] | Record<string, unknown>,
   ): void {
     try {
-      const formattedMessage = this.formatMessage("info", `📊 ${label}`);
+      const formattedMessage = this.formatMessage('info', `📊 ${label}`);
       const coloredMessage = this.colorManager.colorize(
         formattedMessage,
-        this.config.logLevels.info.color
+        this.config.logLevels.info.color,
       );
 
       console.log(coloredMessage);
 
       if (Array.isArray(data)) {
         this.formatTableFromArray(data);
-      } else if (typeof data === "object" && data !== null) {
+      } else if (typeof data === 'object' && data !== null) {
         this.formatTableFromObject(data);
       } else {
         console.log(data);
@@ -497,7 +483,7 @@ export class Logger {
       // Fallback to simple logging if custom formatting fails
       console.error(
         `[LOGHORN ERROR] Custom table formatting failed for "${label}":`,
-        error
+        error,
       );
       console.log(`📊 ${label}:`, data);
     }
@@ -506,7 +492,7 @@ export class Logger {
   private formatTableFromArray(data: unknown[]): void {
     try {
       if (data.length === 0) {
-        console.log("(empty array)");
+        console.log('(empty array)');
         return;
       }
 
@@ -514,7 +500,7 @@ export class Logger {
       const MAX_ARRAY_SIZE = 1000;
       if (data.length > MAX_ARRAY_SIZE) {
         console.log(
-          `(array too large: ${data.length} items, showing first ${MAX_ARRAY_SIZE})`
+          `(array too large: ${data.length} items, showing first ${MAX_ARRAY_SIZE})`,
         );
         data = data.slice(0, MAX_ARRAY_SIZE);
       }
@@ -526,7 +512,7 @@ export class Logger {
       for (let i = 0; i < data.length; i++) {
         try {
           const item = data[i];
-          if (typeof item === "object" && item !== null) {
+          if (typeof item === 'object' && item !== null) {
             objects.push(item as Record<string, unknown>);
           } else {
             primitives.push(item);
@@ -552,14 +538,14 @@ export class Logger {
         this.printPrimitives(primitives);
       }
     } catch (error) {
-      console.error("[LOGHORN ERROR] Array table formatting failed:", error);
-      console.log("(table formatting failed)");
+      console.error('[LOGHORN ERROR] Array table formatting failed:', error);
+      console.log('(table formatting failed)');
     }
   }
 
   private printPrimitiveTable(primitives: unknown[]): void {
     try {
-      console.log("┌─ Index ─┬─ Value ─┐");
+      console.log('┌─ Index ─┬─ Value ─┐');
       for (let i = 0; i < primitives.length; i++) {
         try {
           const item = primitives[i];
@@ -569,9 +555,9 @@ export class Logger {
           console.log(`│ ${i.toString().padEnd(7)} │ [ERROR] │`);
         }
       }
-      console.log("└─────────┴─────────┘");
+      console.log('└─────────┴─────────┘');
     } catch (error) {
-      console.error("[LOGHORN ERROR] Primitive table failed:", error);
+      console.error('[LOGHORN ERROR] Primitive table failed:', error);
     }
   }
 
@@ -585,13 +571,13 @@ export class Logger {
           Object.keys(item).forEach((key) => allKeys.add(key));
         } catch (error) {
           // Skip problematic objects
-          console.warn("[LOGHORN WARNING] Skipping problematic object:", error);
+          console.warn('[LOGHORN WARNING] Skipping problematic object:', error);
         }
       }
 
       const keys = Array.from(allKeys);
       if (keys.length === 0) {
-        console.log("(empty objects)");
+        console.log('(empty objects)');
         return;
       }
 
@@ -599,7 +585,7 @@ export class Logger {
       const MAX_COLUMNS = 20;
       if (keys.length > MAX_COLUMNS) {
         console.log(
-          `(too many columns: ${keys.length}, showing first ${MAX_COLUMNS})`
+          `(too many columns: ${keys.length}, showing first ${MAX_COLUMNS})`,
         );
         keys.splice(MAX_COLUMNS);
       }
@@ -645,40 +631,40 @@ export class Logger {
       // Print footer
       this.printTableFooter(keys, columnWidths);
     } catch (error) {
-      console.error("[LOGHORN ERROR] Object table failed:", error);
+      console.error('[LOGHORN ERROR] Object table failed:', error);
     }
   }
 
   private printTableHeader(
     keys: string[],
-    columnWidths: Record<string, number>
+    columnWidths: Record<string, number>,
   ): void {
     try {
-      let header = "┌─";
+      let header = '┌─';
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
         if (key) {
           const width = columnWidths[key] || 0;
           header += `─ ${key.padEnd(width)} ─`;
           if (i < keys.length - 1) {
-            header += "─┬─";
+            header += '─┬─';
           }
         }
       }
-      header += "─┐";
+      header += '─┐';
       console.log(header);
     } catch (error) {
-      console.error("[LOGHORN ERROR] Header printing failed:", error);
+      console.error('[LOGHORN ERROR] Header printing failed:', error);
     }
   }
 
   private printTableRow(
     item: Record<string, unknown>,
     keys: string[],
-    columnWidths: Record<string, number>
+    columnWidths: Record<string, number>,
   ): void {
     try {
-      let row = "│ ";
+      let row = '│ ';
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
         if (key) {
@@ -687,36 +673,36 @@ export class Logger {
           const width = columnWidths[key] || 0;
           row += ` ${strValue.padEnd(width)} │`;
           if (i < keys.length - 1) {
-            row += " │ ";
+            row += ' │ ';
           }
         }
       }
       console.log(row);
     } catch (error) {
-      console.log("│ [ERROR] │");
+      console.log('│ [ERROR] │');
     }
   }
 
   private printTableFooter(
     keys: string[],
-    columnWidths: Record<string, number>
+    columnWidths: Record<string, number>,
   ): void {
     try {
-      let footer = "└─";
+      let footer = '└─';
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
         if (key) {
           const width = columnWidths[key] || 0;
-          footer += `─${"─".repeat(width + 2)}─`;
+          footer += `─${'─'.repeat(width + 2)}─`;
           if (i < keys.length - 1) {
-            footer += "─┴─";
+            footer += '─┴─';
           }
         }
       }
-      footer += "─┘";
+      footer += '─┘';
       console.log(footer);
     } catch (error) {
-      console.error("[LOGHORN ERROR] Footer printing failed:", error);
+      console.error('[LOGHORN ERROR] Footer printing failed:', error);
     }
   }
 
@@ -726,30 +712,30 @@ export class Logger {
         console.log(this.safeStringify(item));
       }
     } catch (error) {
-      console.error("[LOGHORN ERROR] Primitive printing failed:", error);
+      console.error('[LOGHORN ERROR] Primitive printing failed:', error);
     }
   }
 
   private safeStringify(value: unknown): string {
     try {
-      if (value === null) return "null";
-      if (value === undefined) return "undefined";
-      if (typeof value === "object") {
+      if (value === null) return 'null';
+      if (value === undefined) return 'undefined';
+      if (typeof value === 'object') {
         // Use safe-stable-stringify for objects/arrays
         const str = stringify(value);
-        if (str === undefined) return "[UNSERIALIZABLE]";
+        if (str === undefined) return '[UNSERIALIZABLE]';
         const MAX_STRING_LENGTH = 100;
         return str.length > MAX_STRING_LENGTH
-          ? str.substring(0, MAX_STRING_LENGTH) + "..."
+          ? str.substring(0, MAX_STRING_LENGTH) + '...'
           : str;
       }
       const str = String(value);
       const MAX_STRING_LENGTH = 100;
       return str.length > MAX_STRING_LENGTH
-        ? str.substring(0, MAX_STRING_LENGTH) + "..."
+        ? str.substring(0, MAX_STRING_LENGTH) + '...'
         : str;
     } catch (error) {
-      return "[ERROR]";
+      return '[ERROR]';
     }
   }
 
@@ -757,7 +743,7 @@ export class Logger {
     try {
       const keys = Object.keys(data);
       if (keys.length === 0) {
-        console.log("(empty object)");
+        console.log('(empty object)');
         return;
       }
 
@@ -765,7 +751,7 @@ export class Logger {
       const MAX_PROPERTIES = 50;
       if (keys.length > MAX_PROPERTIES) {
         console.log(
-          `(too many properties: ${keys.length}, showing first ${MAX_PROPERTIES})`
+          `(too many properties: ${keys.length}, showing first ${MAX_PROPERTIES})`,
         );
         keys.splice(MAX_PROPERTIES);
       }
@@ -773,7 +759,7 @@ export class Logger {
       // Calculate max key width
       const maxKeyWidth = Math.max(...keys.map((key) => key.length));
 
-      console.log("┌─" + "─".repeat(maxKeyWidth + 2) + "─┬─ Value ─┐");
+      console.log('┌─' + '─'.repeat(maxKeyWidth + 2) + '─┬─ Value ─┐');
       for (let i = 0; i < keys.length; i++) {
         try {
           const key = keys[i];
@@ -784,11 +770,7 @@ export class Logger {
             console.log(`│ ${paddedKey} │ ${strValue.padEnd(7)} │`);
             if (i < keys.length - 1) {
               console.log(
-                "├─" +
-                  "─".repeat(maxKeyWidth + 2) +
-                  "─┼─" +
-                  "─".repeat(7) +
-                  "─┤"
+                '├─' + '─'.repeat(maxKeyWidth + 2) + '─┼─' + '─'.repeat(7) + '─┤',
               );
             }
           }
@@ -797,11 +779,11 @@ export class Logger {
         }
       }
       console.log(
-        "└─" + "─".repeat(maxKeyWidth + 2) + "─┴─" + "─".repeat(7) + "─┘"
+        '└─' + '─'.repeat(maxKeyWidth + 2) + '─┴─' + '─'.repeat(7) + '─┘',
       );
     } catch (error) {
-      console.error("[LOGHORN ERROR] Object table formatting failed:", error);
-      console.log("(table formatting failed)");
+      console.error('[LOGHORN ERROR] Object table formatting failed:', error);
+      console.log('(table formatting failed)');
     }
   }
 

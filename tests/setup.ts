@@ -30,27 +30,27 @@ beforeEach(() => {
 
   // Mock console methods
   console.log = jest.fn((...args) => {
-    global.capturedLogs.push(args.join(" "));
+    global.capturedLogs.push(args.join(' '));
     originalConsole.log(...args);
   });
 
   console.info = jest.fn((...args) => {
-    global.capturedInfos.push(args.join(" "));
+    global.capturedInfos.push(args.join(' '));
     originalConsole.info(...args);
   });
 
   console.warn = jest.fn((...args) => {
-    global.capturedWarns.push(args.join(" "));
+    global.capturedWarns.push(args.join(' '));
     originalConsole.warn(...args);
   });
 
   console.error = jest.fn((...args) => {
-    global.capturedErrors.push(args.join(" "));
+    global.capturedErrors.push(args.join(' '));
     originalConsole.error(...args);
   });
 
   console.debug = jest.fn((...args) => {
-    global.capturedDebugs.push(args.join(" "));
+    global.capturedDebugs.push(args.join(' '));
     originalConsole.debug(...args);
   });
 

@@ -1,19 +1,20 @@
 import type {
   FastifyInstance,
-  FastifyRequest,
   FastifyReply,
+  FastifyRequest,
   HookHandlerDoneFunction,
-} from "fastify";
-import type { Logger } from "../core/logger";
-import type { MiddlewareOptions } from "../types";
-import { v4 as uuidv4 } from "uuid";
+} from 'fastify';
+import { v4 as uuidv4 } from 'uuid';
+
+import type { Logger } from '../core/logger';
+import type { MiddlewareOptions } from '../types';
 
 export interface FastifyLoghornOptions extends MiddlewareOptions {}
 
 export function fastifyLoghorn(
   fastify: FastifyInstance,
   logger: Logger,
-  options: FastifyLoghornOptions = {}
+  options: FastifyLoghornOptions = {},
 ) {
   const {
     logRequests = true,
@@ -24,11 +25,11 @@ export function fastifyLoghorn(
   } = options;
 
   fastify.addHook(
-    "onRequest",
+    'onRequest',
     (
       request: FastifyRequest,
       _reply: FastifyReply,
-      done: HookHandlerDoneFunction
+      done: HookHandlerDoneFunction,
     ) => {
       if (excludePaths.some((path) => request.url.startsWith(path))) {
         return done();
@@ -48,15 +49,15 @@ export function fastifyLoghorn(
         });
       }
       done();
-    }
+    },
   );
 
   fastify.addHook(
-    "onResponse",
+    'onResponse',
     (
       request: FastifyRequest,
       reply: FastifyReply,
-      done: HookHandlerDoneFunction
+      done: HookHandlerDoneFunction,
     ) => {
       const loghorn = (request as any).loghorn;
       if (!loghorn) return done();
@@ -64,35 +65,31 @@ export function fastifyLoghorn(
       const duration = Date.now() - startTime;
       if (logResponses) {
         const statusEmoji =
-          reply.statusCode >= 400
-            ? "❌"
-            : reply.statusCode >= 300
-            ? "⚠️"
-            : "✅";
+          reply.statusCode >= 400 ? '❌' : reply.statusCode >= 300 ? '⚠️' : '✅';
         logger.info(
           `${statusEmoji} ${request.method} ${request.url} - ${reply.statusCode} (${duration}ms)`,
           {
             requestId,
             statusCode: reply.statusCode,
             duration,
-            contentLength: reply.getHeader("content-length"),
-          }
+            contentLength: reply.getHeader('content-length'),
+          },
         );
       }
       done();
-    }
+    },
   );
 
   fastify.addHook(
-    "onError",
+    'onError',
     (
       request: FastifyRequest,
       _reply: FastifyReply,
       error: Error,
-      done: HookHandlerDoneFunction
+      done: HookHandlerDoneFunction,
     ) => {
       const loghorn = (request as any).loghorn;
-      const requestId = loghorn?.requestId || "unknown";
+      const requestId = loghorn?.requestId || 'unknown';
       if (logErrors) {
         logger.error(`💥 Error in ${request.method} ${request.url}`, {
           requestId,
@@ -101,21 +98,21 @@ export function fastifyLoghorn(
         });
       }
       done();
-    }
+    },
   );
 
   // Custom format hook (optional)
   if (customFormat) {
     fastify.addHook(
-      "onSend",
+      'onSend',
       (
         request: FastifyRequest,
         reply: FastifyReply,
         _payload: any,
-        done: HookHandlerDoneFunction
+        done: HookHandlerDoneFunction,
       ) => {
         customFormat(request as any, reply as any, done);
-      }
+      },
     );
   }
 }

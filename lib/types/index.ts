@@ -1,8 +1,8 @@
-import type { Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, Response } from 'express';
 
-export type LogLevel = "debug" | "info" | "warn" | "error" | "trace" | "log";
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'trace' | 'log';
 
-export type Environment = "development" | "production" | "test" | "staging";
+export type Environment = 'development' | 'production' | 'test' | 'staging';
 
 export interface LogConfig {
   level: LogLevel;
@@ -78,11 +78,11 @@ export interface MiddlewareOptions {
   customFormat?: (
     req: ExpressRequest,
     res: ExpressResponse,
-    next: NextFunction
+    next: NextFunction,
   ) => void;
 }
 
-export interface BrowserLoggerConfig extends Omit<LoggerConfig, "middleware"> {
+export interface BrowserLoggerConfig extends Omit<LoggerConfig, 'middleware'> {
   enableConsoleMethods: boolean;
   enableGrouping: boolean;
   maxGroupDepth: number;

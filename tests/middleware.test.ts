@@ -1,13 +1,13 @@
+import { createLoggerConfig } from '../lib/config';
+import { Logger } from '../lib/core/logger';
 import {
   createLoggingMiddleware,
   createMorganMiddleware,
-} from "../src/middleware/express";
-import { fastifyLoghorn } from "../src/middleware/fastify";
-import { Logger } from "../src/core/logger";
-import { createLoggerConfig } from "../src/config";
-import { clearCapturedLogs, getCapturedLogs } from "./setup";
+} from '../lib/middleware/express';
+import { fastifyLoghorn } from '../lib/middleware/fastify';
+import { clearCapturedLogs, getCapturedLogs } from './setup';
 
-describe("Middleware", () => {
+describe('Middleware', () => {
   let logger: Logger;
 
   beforeEach(() => {
@@ -20,23 +20,23 @@ describe("Middleware", () => {
     logger = new Logger(config);
   });
 
-  describe("Express Middleware", () => {
-    test("should create logging middleware", () => {
+  describe('Express Middleware', () => {
+    test('should create logging middleware', () => {
       const middleware = createLoggingMiddleware(logger);
-      expect(typeof middleware).toBe("function");
+      expect(typeof middleware).toBe('function');
     });
 
-    test("should log requests when enabled", () => {
+    test('should log requests when enabled', () => {
       const middleware = createLoggingMiddleware(logger, { logRequests: true });
 
       const req = {
-        method: "GET",
-        url: "/test",
-        path: "/test",
-        get: jest.fn().mockReturnValue("test-agent"),
-        ip: "127.0.0.1",
-        connection: { remoteAddress: "127.0.0.1" },
-        headers: { "user-agent": "test-agent" },
+        method: 'GET',
+        url: '/test',
+        path: '/test',
+        get: jest.fn().mockReturnValue('test-agent'),
+        ip: '127.0.0.1',
+        connection: { remoteAddress: '127.0.0.1' },
+        headers: { 'user-agent': 'test-agent' },
       } as any;
 
       const res = {
@@ -56,18 +56,18 @@ describe("Middleware", () => {
       expect(req.loghorn.startTime).toBeDefined();
     });
 
-    test("should skip logging for excluded paths", () => {
+    test('should skip logging for excluded paths', () => {
       const middleware = createLoggingMiddleware(logger, {
-        excludePaths: ["/health"],
+        excludePaths: ['/health'],
       });
 
       const req = {
-        method: "GET",
-        url: "/health",
-        path: "/health",
+        method: 'GET',
+        url: '/health',
+        path: '/health',
         get: jest.fn(),
-        ip: "127.0.0.1",
-        connection: { remoteAddress: "127.0.0.1" },
+        ip: '127.0.0.1',
+        connection: { remoteAddress: '127.0.0.1' },
         headers: {},
       } as any;
 
@@ -86,18 +86,18 @@ describe("Middleware", () => {
       expect(req.loghorn).toBeUndefined();
     });
 
-    test("should log responses when enabled", () => {
+    test('should log responses when enabled', () => {
       const middleware = createLoggingMiddleware(logger, {
         logResponses: true,
       });
 
       const req = {
-        method: "GET",
-        url: "/test",
-        path: "/test",
+        method: 'GET',
+        url: '/test',
+        path: '/test',
         get: jest.fn(),
-        ip: "127.0.0.1",
-        connection: { remoteAddress: "127.0.0.1" },
+        ip: '127.0.0.1',
+        connection: { remoteAddress: '127.0.0.1' },
         headers: {},
       } as any;
 
@@ -105,7 +105,7 @@ describe("Middleware", () => {
         statusCode: 200,
         end: jest.fn(),
         on: jest.fn(),
-        get: jest.fn().mockReturnValue("100"),
+        get: jest.fn().mockReturnValue('100'),
       } as any;
 
       const next = jest.fn();
@@ -119,16 +119,16 @@ describe("Middleware", () => {
       expect(res.loghorn).toBeDefined();
     });
 
-    test("should log errors when enabled", () => {
+    test('should log errors when enabled', () => {
       const middleware = createLoggingMiddleware(logger, { logErrors: true });
 
       const req = {
-        method: "GET",
-        url: "/test",
-        path: "/test",
+        method: 'GET',
+        url: '/test',
+        path: '/test',
         get: jest.fn(),
-        ip: "127.0.0.1",
-        connection: { remoteAddress: "127.0.0.1" },
+        ip: '127.0.0.1',
+        connection: { remoteAddress: '127.0.0.1' },
         headers: {},
       } as any;
 
@@ -145,28 +145,28 @@ describe("Middleware", () => {
 
       // Simulate error after next()
       const errorHandler = res.on.mock.calls.find(
-        (call: any) => call[0] === "error"
+        (call: any) => call[0] === 'error',
       )[1];
       next();
-      const testError = new Error("Test error");
+      const testError = new Error('Test error');
       errorHandler(testError);
 
       // Force the logger to process the error
-      logger.error("Error in GET /test", {
+      logger.error('Error in GET /test', {
         error: testError.message,
         stack: testError.stack,
       });
 
       const logs = getCapturedLogs();
-      const errors = logs.filter((log) => log.includes("Error in GET /test"));
+      const errors = logs.filter((log) => log.includes('Error in GET /test'));
       expect(errors.length).toBeGreaterThan(0);
     });
 
-    test("should handle customFormat in express middleware", () => {
+    test('should handle customFormat in express middleware', () => {
       const middleware = createLoggingMiddleware(logger, {
         customFormat: jest.fn((req, _res, next) => {
           req.loghorn = {
-            requestId: "custom",
+            requestId: 'custom',
             startTime: Date.now(),
             context: {},
           };
@@ -175,12 +175,12 @@ describe("Middleware", () => {
       });
 
       const req = {
-        method: "POST",
-        url: "/custom",
-        path: "/custom",
+        method: 'POST',
+        url: '/custom',
+        path: '/custom',
         get: jest.fn(),
-        ip: "127.0.0.1",
-        connection: { remoteAddress: "127.0.0.1" },
+        ip: '127.0.0.1',
+        connection: { remoteAddress: '127.0.0.1' },
         headers: {},
       } as any;
 
@@ -195,21 +195,21 @@ describe("Middleware", () => {
 
       middleware(req, res, next);
       expect(next).toHaveBeenCalled();
-      expect(req.loghorn?.requestId).toBe("custom");
+      expect(req.loghorn?.requestId).toBe('custom');
     });
 
-    test("should handle excluded paths in express middleware", () => {
+    test('should handle excluded paths in express middleware', () => {
       const middleware = createLoggingMiddleware(logger, {
-        excludePaths: ["/health", "/metrics"],
+        excludePaths: ['/health', '/metrics'],
       });
 
       const req = {
-        method: "GET",
-        url: "/health",
-        path: "/health",
+        method: 'GET',
+        url: '/health',
+        path: '/health',
         get: jest.fn(),
-        ip: "127.0.0.1",
-        connection: { remoteAddress: "127.0.0.1" },
+        ip: '127.0.0.1',
+        connection: { remoteAddress: '127.0.0.1' },
         headers: {},
       } as any;
 
@@ -227,18 +227,18 @@ describe("Middleware", () => {
       expect(req.loghorn).toBeUndefined();
     });
 
-    test("should handle response logging with different status codes", () => {
+    test('should handle response logging with different status codes', () => {
       const middleware = createLoggingMiddleware(logger, {
         logResponses: true,
       });
 
       const req = {
-        method: "GET",
-        url: "/test",
-        path: "/test",
+        method: 'GET',
+        url: '/test',
+        path: '/test',
         get: jest.fn(),
-        ip: "127.0.0.1",
-        connection: { remoteAddress: "127.0.0.1" },
+        ip: '127.0.0.1',
+        connection: { remoteAddress: '127.0.0.1' },
         headers: {},
       } as any;
 
@@ -246,9 +246,9 @@ describe("Middleware", () => {
         statusCode: 404,
         end: jest.fn(),
         on: jest.fn((event, cb) => {
-          if (event === "finish") cb();
+          if (event === 'finish') cb();
         }),
-        get: jest.fn().mockReturnValue("100"),
+        get: jest.fn().mockReturnValue('100'),
       } as any;
 
       const next = jest.fn();
@@ -257,18 +257,18 @@ describe("Middleware", () => {
       expect(next).toHaveBeenCalled();
     });
 
-    test("should handle response logging with 3xx status code", () => {
+    test('should handle response logging with 3xx status code', () => {
       const middleware = createLoggingMiddleware(logger, {
         logResponses: true,
       });
 
       const req = {
-        method: "GET",
-        url: "/redirect",
-        path: "/redirect",
+        method: 'GET',
+        url: '/redirect',
+        path: '/redirect',
         get: jest.fn(),
-        ip: "127.0.0.1",
-        connection: { remoteAddress: "127.0.0.1" },
+        ip: '127.0.0.1',
+        connection: { remoteAddress: '127.0.0.1' },
         headers: {},
       } as any;
 
@@ -276,9 +276,9 @@ describe("Middleware", () => {
         statusCode: 302,
         end: jest.fn(),
         on: jest.fn((event, cb) => {
-          if (event === "finish") cb();
+          if (event === 'finish') cb();
         }),
-        get: jest.fn().mockReturnValue("100"),
+        get: jest.fn().mockReturnValue('100'),
       } as any;
 
       const next = jest.fn();
@@ -287,7 +287,7 @@ describe("Middleware", () => {
       expect(next).toHaveBeenCalled();
     });
 
-    test("should log error on response error event in express middleware", () => {
+    test('should log error on response error event in express middleware', () => {
       const logger = {
         setContext: jest.fn(),
         info: jest.fn(),
@@ -295,12 +295,12 @@ describe("Middleware", () => {
       } as any;
       const middleware = createLoggingMiddleware(logger, { logErrors: true });
       const req = {
-        method: "GET",
-        url: "/err",
-        path: "/err",
+        method: 'GET',
+        url: '/err',
+        path: '/err',
         get: jest.fn(),
-        ip: "127.0.0.1",
-        connection: { remoteAddress: "127.0.0.1" },
+        ip: '127.0.0.1',
+        connection: { remoteAddress: '127.0.0.1' },
         headers: {},
       } as any;
       let errorHandler: any;
@@ -308,7 +308,7 @@ describe("Middleware", () => {
         statusCode: 500,
         end: jest.fn(),
         on: jest.fn((event, cb) => {
-          if (event === "error") errorHandler = cb;
+          if (event === 'error') errorHandler = cb;
         }),
         get: jest.fn(),
       } as any;
@@ -316,11 +316,11 @@ describe("Middleware", () => {
       middleware(req, res, next);
       expect(next).toHaveBeenCalled();
       // Simulate error event
-      errorHandler(new Error("fail"));
+      errorHandler(new Error('fail'));
       expect(logger.error).toHaveBeenCalled();
     });
 
-    test("should handle error event in express middleware", () => {
+    test('should handle error event in express middleware', () => {
       const logger = {
         setContext: jest.fn(),
         info: jest.fn(),
@@ -328,12 +328,12 @@ describe("Middleware", () => {
       } as any;
       const middleware = createLoggingMiddleware(logger, { logErrors: true });
       const req = {
-        method: "GET",
-        url: "/error",
-        path: "/error",
+        method: 'GET',
+        url: '/error',
+        path: '/error',
         get: jest.fn(),
-        ip: "127.0.0.1",
-        connection: { remoteAddress: "127.0.0.1" },
+        ip: '127.0.0.1',
+        connection: { remoteAddress: '127.0.0.1' },
         headers: {},
       } as any;
       let errorHandler: any;
@@ -341,7 +341,7 @@ describe("Middleware", () => {
         statusCode: 500,
         end: jest.fn(),
         on: jest.fn((event, cb) => {
-          if (event === "error") errorHandler = cb;
+          if (event === 'error') errorHandler = cb;
         }),
         get: jest.fn(),
       } as any;
@@ -349,30 +349,30 @@ describe("Middleware", () => {
       middleware(req, res, next);
       expect(next).toHaveBeenCalled();
       // Simulate error event
-      errorHandler(new Error("test error"));
+      errorHandler(new Error('test error'));
       expect(logger.error).toHaveBeenCalledWith(
-        "💥 Error in GET /error",
+        '💥 Error in GET /error',
         expect.objectContaining({
           requestId: expect.any(String),
-          error: "test error",
+          error: 'test error',
           stack: expect.any(String),
-        })
+        }),
       );
     });
 
-    describe("Express Middleware Edge Cases", () => {
-      it("should handle response error event", () => {
+    describe('Express Middleware Edge Cases', () => {
+      it('should handle response error event', () => {
         const logger = new Logger(createLoggerConfig());
-        const errorSpy = jest.spyOn(logger, "error");
+        const errorSpy = jest.spyOn(logger, 'error');
         const middleware = createLoggingMiddleware(logger, { logErrors: true });
 
         const req = {
-          method: "GET",
-          url: "/test",
-          path: "/test",
+          method: 'GET',
+          url: '/test',
+          path: '/test',
           get: jest.fn(),
-          ip: "127.0.0.1",
-          connection: { remoteAddress: "127.0.0.1" },
+          ip: '127.0.0.1',
+          connection: { remoteAddress: '127.0.0.1' },
           headers: {},
         } as any;
 
@@ -388,30 +388,30 @@ describe("Middleware", () => {
 
         // Get the error handler that was registered
         const errorHandler = res.on.mock.calls.find(
-          (call: any) => call[0] === "error"
+          (call: any) => call[0] === 'error',
         )[1];
 
         // Call the error handler directly
-        errorHandler(new Error("Test error"));
+        errorHandler(new Error('Test error'));
 
         expect(errorSpy).toHaveBeenCalledWith(
-          expect.stringContaining("💥 Error in GET /test"),
-          expect.objectContaining({ error: "Test error" })
+          expect.stringContaining('💥 Error in GET /test'),
+          expect.objectContaining({ error: 'Test error' }),
         );
       });
 
-      it("should handle customFormat without calling next", () => {
+      it('should handle customFormat without calling next', () => {
         const logger = new Logger(createLoggerConfig());
         const customFormat = jest.fn();
         const middleware = createLoggingMiddleware(logger, { customFormat });
 
         const req = {
-          method: "GET",
-          url: "/test",
-          path: "/test",
+          method: 'GET',
+          url: '/test',
+          path: '/test',
           get: jest.fn(),
-          ip: "127.0.0.1",
-          connection: { remoteAddress: "127.0.0.1" },
+          ip: '127.0.0.1',
+          connection: { remoteAddress: '127.0.0.1' },
           headers: {},
         } as any;
 
@@ -432,8 +432,8 @@ describe("Middleware", () => {
     });
   });
 
-  describe("Fastify Plugin", () => {
-    test("should create fastify plugin", () => {
+  describe('Fastify Plugin', () => {
+    test('should create fastify plugin', () => {
       const fastify = {
         addHook: jest.fn(),
       } as any;
@@ -441,20 +441,17 @@ describe("Middleware", () => {
       fastifyLoghorn(fastify, logger);
 
       expect(fastify.addHook).toHaveBeenCalledWith(
-        "onRequest",
-        expect.any(Function)
+        'onRequest',
+        expect.any(Function),
       );
       expect(fastify.addHook).toHaveBeenCalledWith(
-        "onResponse",
-        expect.any(Function)
+        'onResponse',
+        expect.any(Function),
       );
-      expect(fastify.addHook).toHaveBeenCalledWith(
-        "onError",
-        expect.any(Function)
-      );
+      expect(fastify.addHook).toHaveBeenCalledWith('onError', expect.any(Function));
     });
 
-    test("should handle request logging", () => {
+    test('should handle request logging', () => {
       const fastify = {
         addHook: jest.fn(),
       } as any;
@@ -462,14 +459,14 @@ describe("Middleware", () => {
       fastifyLoghorn(fastify, logger, { logRequests: true });
 
       const onRequestHook = fastify.addHook.mock.calls.find(
-        (call: any) => call[0] === "onRequest"
+        (call: any) => call[0] === 'onRequest',
       )[1];
 
       const req = {
-        method: "GET",
-        url: "/test",
-        headers: { "user-agent": "test-agent" },
-        ip: "127.0.0.1",
+        method: 'GET',
+        url: '/test',
+        headers: { 'user-agent': 'test-agent' },
+        ip: '127.0.0.1',
       } as any;
 
       const reply = {} as any;
@@ -482,7 +479,7 @@ describe("Middleware", () => {
       expect(req.loghorn.requestId).toBeDefined();
     });
 
-    test("should handle response logging", () => {
+    test('should handle response logging', () => {
       const fastify = {
         addHook: jest.fn(),
       } as any;
@@ -490,18 +487,18 @@ describe("Middleware", () => {
       fastifyLoghorn(fastify, logger, { logResponses: true });
 
       const onResponseHook = fastify.addHook.mock.calls.find(
-        (call: any) => call[0] === "onResponse"
+        (call: any) => call[0] === 'onResponse',
       )[1];
 
       const req = {
-        method: "GET",
-        url: "/test",
-        loghorn: { requestId: "test-id", startTime: Date.now() },
+        method: 'GET',
+        url: '/test',
+        loghorn: { requestId: 'test-id', startTime: Date.now() },
       } as any;
 
       const reply = {
         statusCode: 200,
-        getHeader: jest.fn().mockReturnValue("100"),
+        getHeader: jest.fn().mockReturnValue('100'),
       } as any;
 
       const done = jest.fn();
@@ -511,7 +508,7 @@ describe("Middleware", () => {
       expect(done).toHaveBeenCalled();
     });
 
-    test("should handle error logging", () => {
+    test('should handle error logging', () => {
       const fastify = {
         addHook: jest.fn(),
       } as any;
@@ -519,17 +516,17 @@ describe("Middleware", () => {
       fastifyLoghorn(fastify, logger, { logErrors: true });
 
       const onErrorHook = fastify.addHook.mock.calls.find(
-        (call: any) => call[0] === "onError"
+        (call: any) => call[0] === 'onError',
       )[1];
 
       const req = {
-        method: "GET",
-        url: "/test",
-        loghorn: { requestId: "test-id" },
+        method: 'GET',
+        url: '/test',
+        loghorn: { requestId: 'test-id' },
       } as any;
 
       const reply = {} as any;
-      const error = new Error("Test error");
+      const error = new Error('Test error');
       const done = jest.fn();
 
       onErrorHook(req, reply, error, done);
@@ -537,22 +534,22 @@ describe("Middleware", () => {
       expect(done).toHaveBeenCalled();
     });
 
-    test("should skip logging for excluded paths", () => {
+    test('should skip logging for excluded paths', () => {
       const fastify = {
         addHook: jest.fn(),
       } as any;
 
-      fastifyLoghorn(fastify, logger, { excludePaths: ["/health"] });
+      fastifyLoghorn(fastify, logger, { excludePaths: ['/health'] });
 
       const onRequestHook = fastify.addHook.mock.calls.find(
-        (call: any) => call[0] === "onRequest"
+        (call: any) => call[0] === 'onRequest',
       )[1];
 
       const req = {
-        method: "GET",
-        url: "/health",
+        method: 'GET',
+        url: '/health',
         headers: {},
-        ip: "127.0.0.1",
+        ip: '127.0.0.1',
       } as any;
 
       const reply = {} as any;
@@ -564,7 +561,7 @@ describe("Middleware", () => {
       expect(req.loghorn).toBeUndefined();
     });
 
-    test("should add onSend hook if customFormat is provided in fastifyLoghorn", () => {
+    test('should add onSend hook if customFormat is provided in fastifyLoghorn', () => {
       const fastify = { addHook: jest.fn() } as any;
       const logger = {
         info: jest.fn(),
@@ -572,32 +569,29 @@ describe("Middleware", () => {
         setContext: jest.fn(),
       } as any;
       const customFormat = jest.fn((_req, _res, done) => done());
-      const { fastifyLoghorn } = require("../src/middleware/fastify");
+      const { fastifyLoghorn } = require('../lib/middleware/fastify');
       fastifyLoghorn(fastify, logger, { customFormat });
-      expect(fastify.addHook).toHaveBeenCalledWith(
-        "onSend",
-        expect.any(Function)
-      );
+      expect(fastify.addHook).toHaveBeenCalledWith('onSend', expect.any(Function));
     });
 
-    test("should handle excluded paths in fastify plugin", () => {
+    test('should handle excluded paths in fastify plugin', () => {
       const fastify = {
         addHook: jest.fn(),
       } as any;
 
       fastifyLoghorn(fastify, logger, {
-        excludePaths: ["/health", "/metrics"],
+        excludePaths: ['/health', '/metrics'],
       });
 
       const onRequestHook = fastify.addHook.mock.calls.find(
-        (call: any) => call[0] === "onRequest"
+        (call: any) => call[0] === 'onRequest',
       )[1];
 
       const req = {
-        method: "GET",
-        url: "/health",
+        method: 'GET',
+        url: '/health',
         headers: {},
-        ip: "127.0.0.1",
+        ip: '127.0.0.1',
       } as any;
 
       const reply = {} as any;
@@ -609,7 +603,7 @@ describe("Middleware", () => {
       expect(req.loghorn).toBeUndefined();
     });
 
-    test("should handle error logging in fastify plugin", () => {
+    test('should handle error logging in fastify plugin', () => {
       const fastify = {
         addHook: jest.fn(),
       } as any;
@@ -617,17 +611,17 @@ describe("Middleware", () => {
       fastifyLoghorn(fastify, logger, { logErrors: true });
 
       const onErrorHook = fastify.addHook.mock.calls.find(
-        (call: any) => call[0] === "onError"
+        (call: any) => call[0] === 'onError',
       )[1];
 
       const req = {
-        method: "GET",
-        url: "/test",
-        loghorn: { requestId: "test-id" },
+        method: 'GET',
+        url: '/test',
+        loghorn: { requestId: 'test-id' },
       } as any;
 
       const reply = {} as any;
-      const error = new Error("Test error");
+      const error = new Error('Test error');
       const done = jest.fn();
 
       onErrorHook(req, reply, error, done);
@@ -635,7 +629,7 @@ describe("Middleware", () => {
       expect(done).toHaveBeenCalled();
     });
 
-    test("should handle error logging without loghorn context in fastify plugin", () => {
+    test('should handle error logging without loghorn context in fastify plugin', () => {
       const fastify = {
         addHook: jest.fn(),
       } as any;
@@ -643,17 +637,17 @@ describe("Middleware", () => {
       fastifyLoghorn(fastify, logger, { logErrors: true });
 
       const onErrorHook = fastify.addHook.mock.calls.find(
-        (call: any) => call[0] === "onError"
+        (call: any) => call[0] === 'onError',
       )[1];
 
       const req = {
-        method: "GET",
-        url: "/test",
+        method: 'GET',
+        url: '/test',
         // No loghorn context
       } as any;
 
       const reply = {} as any;
-      const error = new Error("Test error");
+      const error = new Error('Test error');
       const done = jest.fn();
 
       onErrorHook(req, reply, error, done);
@@ -661,7 +655,7 @@ describe("Middleware", () => {
       expect(done).toHaveBeenCalled();
     });
 
-    test("should handle response logging without loghorn context in fastify plugin", () => {
+    test('should handle response logging without loghorn context in fastify plugin', () => {
       const fastify = {
         addHook: jest.fn(),
       } as any;
@@ -669,12 +663,12 @@ describe("Middleware", () => {
       fastifyLoghorn(fastify, logger, { logResponses: true });
 
       const onResponseHook = fastify.addHook.mock.calls.find(
-        (call: any) => call[0] === "onResponse"
+        (call: any) => call[0] === 'onResponse',
       )[1];
 
       const req = {
-        method: "GET",
-        url: "/test",
+        method: 'GET',
+        url: '/test',
         // No loghorn context
       } as any;
 
@@ -686,12 +680,12 @@ describe("Middleware", () => {
       expect(done).toHaveBeenCalled();
     });
 
-    test("should call customFormat hook in fastify plugin", () => {
+    test('should call customFormat hook in fastify plugin', () => {
       const fastify = { addHook: jest.fn() } as any;
       const customFormat = jest.fn((_req, _res, done) => done());
       fastifyLoghorn(fastify, logger, { customFormat });
       const onSendHook = fastify.addHook.mock.calls.find(
-        (call: any) => call[0] === "onSend"
+        (call: any) => call[0] === 'onSend',
       )[1];
       const req = {} as any;
       const res = {} as any;
@@ -701,8 +695,8 @@ describe("Middleware", () => {
       expect(done).toHaveBeenCalled();
     });
 
-    describe("Fastify Plugin Edge Cases", () => {
-      it("should handle onSend hook when customFormat is provided", () => {
+    describe('Fastify Plugin Edge Cases', () => {
+      it('should handle onSend hook when customFormat is provided', () => {
         const logger = new Logger(createLoggerConfig());
         const customFormat = jest.fn();
 
@@ -714,27 +708,27 @@ describe("Middleware", () => {
 
         // Should add onSend hook
         expect(fastify.addHook).toHaveBeenCalledWith(
-          "onSend",
-          expect.any(Function)
+          'onSend',
+          expect.any(Function),
         );
       });
     });
   });
 
-  describe("Morgan Middleware", () => {
-    test("should create morgan middleware", () => {
+  describe('Morgan Middleware', () => {
+    test('should create morgan middleware', () => {
       const middleware = createMorganMiddleware(logger);
-      expect(typeof middleware).toBe("function");
+      expect(typeof middleware).toBe('function');
     });
 
-    test("should create morgan middleware and call logger", () => {
+    test('should create morgan middleware and call logger', () => {
       const logger = { info: jest.fn() } as any;
       const middleware =
-        require("../src/middleware/express").createMorganMiddleware(logger);
+        require('../lib/middleware/express').createMorganMiddleware(logger);
       const req = {} as any;
       const res = {} as any;
       const next = jest.fn();
-      expect(typeof middleware).toBe("function");
+      expect(typeof middleware).toBe('function');
       // Call the returned middleware
       middleware(req, res, next);
       expect(next).toHaveBeenCalled();

@@ -1,7 +1,8 @@
-import type { Request, Response, NextFunction } from "express";
-import type { Logger } from "../core/logger";
-import type { MiddlewareOptions } from "../types";
-import { v4 as uuidv4 } from "uuid";
+import type { NextFunction, Request, Response } from 'express';
+import { v4 as uuidv4 } from 'uuid';
+
+import type { Logger } from '../core/logger';
+import type { MiddlewareOptions } from '../types';
 
 export interface ExpressRequest extends Request {
   loghorn?: {
@@ -21,7 +22,7 @@ export interface ExpressResponse extends Response {
 
 export function createLoggingMiddleware(
   logger: Logger,
-  options: MiddlewareOptions = {}
+  options: MiddlewareOptions = {},
 ): (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => void {
   const {
     logRequests = true,
@@ -47,7 +48,7 @@ export function createLoggingMiddleware(
       context: {
         method: req.method,
         url: req.url,
-        userAgent: req.get("User-Agent"),
+        userAgent: req.get('User-Agent'),
         ip: req.ip || req.connection.remoteAddress,
       },
     };
@@ -63,7 +64,7 @@ export function createLoggingMiddleware(
     if (logRequests) {
       logger.info(`📥 ${req.method} ${req.url}`, {
         requestId,
-        userAgent: req.get("User-Agent"),
+        userAgent: req.get('User-Agent'),
         ip: req.ip || req.connection.remoteAddress,
         headers: req.headers,
       });
@@ -85,15 +86,15 @@ export function createLoggingMiddleware(
       // Log response if enabled
       if (logResponses) {
         const statusEmoji =
-          res.statusCode >= 400 ? "❌" : res.statusCode >= 300 ? "⚠️" : "✅";
+          res.statusCode >= 400 ? '❌' : res.statusCode >= 300 ? '⚠️' : '✅';
         logger.info(
           `${statusEmoji} ${req.method} ${req.url} - ${res.statusCode} (${duration}ms)`,
           {
             requestId,
             statusCode: res.statusCode,
             duration,
-            contentLength: res.get("Content-Length"),
-          }
+            contentLength: res.get('Content-Length'),
+          },
         );
       }
 
@@ -103,7 +104,7 @@ export function createLoggingMiddleware(
 
     // Handle errors
     if (logErrors) {
-      res.on("error", (error: Error) => {
+      res.on('error', (error: Error) => {
         logger.error(`💥 Error in ${req.method} ${req.url}`, {
           requestId,
           error: error.message,
@@ -123,15 +124,15 @@ export function createLoggingMiddleware(
 
 export function createMorganMiddleware(logger: Logger) {
   return (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => {
-    const morgan = require("morgan");
+    const morgan = require('morgan');
 
     const morganMiddleware = morgan(
       (tokens: any, req: ExpressRequest, res: ExpressResponse) => {
-        const requestId = req.loghorn?.requestId || "unknown";
+        const requestId = req.loghorn?.requestId || 'unknown';
         const method = tokens.method(req, res);
         const url = tokens.url(req, res);
         const status = tokens.status(req, res);
-        const responseTime = tokens["response-time"](req, res);
+        const responseTime = tokens['response-time'](req, res);
 
         return `${method} ${url} ${status} ${responseTime}ms [${requestId}]`;
       },
@@ -141,7 +142,7 @@ export function createMorganMiddleware(logger: Logger) {
             logger.info(message.trim());
           },
         },
-      }
+      },
     );
 
     return morganMiddleware(req, res, next);

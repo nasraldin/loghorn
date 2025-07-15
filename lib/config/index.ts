@@ -1,40 +1,40 @@
-import type { LoggerConfig, LogLevel, Environment, LogConfig } from "../types";
+import type { Environment, LogConfig, LoggerConfig, LogLevel } from '../types';
 
 export const DEFAULT_LOG_LEVELS: Record<LogLevel, LogConfig> = {
   debug: {
-    level: "debug",
-    color: "#6c757d",
-    emoji: "🐛",
+    level: 'debug',
+    color: '#6c757d',
+    emoji: '🐛',
     enabled: true,
   },
   info: {
-    level: "info",
-    color: "#17a2b8",
-    emoji: "ℹ️",
+    level: 'info',
+    color: '#17a2b8',
+    emoji: 'ℹ️',
     enabled: true,
   },
   warn: {
-    level: "warn",
-    color: "#ffc107",
-    emoji: "⚠️",
+    level: 'warn',
+    color: '#ffc107',
+    emoji: '⚠️',
     enabled: true,
   },
   error: {
-    level: "error",
-    color: "#dc3545",
-    emoji: "❌",
+    level: 'error',
+    color: '#dc3545',
+    emoji: '❌',
     enabled: true,
   },
   trace: {
-    level: "trace",
-    color: "#6f42c1",
-    emoji: "🔍",
+    level: 'trace',
+    color: '#6f42c1',
+    emoji: '🔍',
     enabled: true,
   },
   log: {
-    level: "log",
-    color: "#28a745",
-    emoji: "📝",
+    level: 'log',
+    color: '#28a745',
+    emoji: '📝',
     enabled: true,
   },
 };
@@ -56,7 +56,7 @@ export const ENVIRONMENT_CONFIGS: Record<Environment, Partial<LoggerConfig>> = {
       logRequests: true,
       logResponses: true,
       logErrors: true,
-      excludePaths: ["/health", "/metrics"],
+      excludePaths: ['/health', '/metrics'],
     },
   },
   production: {
@@ -75,7 +75,7 @@ export const ENVIRONMENT_CONFIGS: Record<Environment, Partial<LoggerConfig>> = {
       logRequests: false,
       logResponses: false,
       logErrors: true,
-      excludePaths: ["/health", "/metrics", "/favicon.ico"],
+      excludePaths: ['/health', '/metrics', '/favicon.ico'],
     },
   },
   test: {
@@ -114,22 +114,22 @@ export const ENVIRONMENT_CONFIGS: Record<Environment, Partial<LoggerConfig>> = {
       logRequests: true,
       logResponses: true,
       logErrors: true,
-      excludePaths: ["/health", "/metrics"],
+      excludePaths: ['/health', '/metrics'],
     },
   },
 };
 
 export function getEnvironment(): Environment {
   const env = (
-    typeof process !== "undefined"
-      ? process.env["NODE_ENV"]?.toLowerCase()
+    typeof process !== 'undefined'
+      ? process.env['NODE_ENV']?.toLowerCase()
       : undefined
   ) as Environment;
-  return env && ENVIRONMENT_CONFIGS[env] ? env : "development";
+  return env && ENVIRONMENT_CONFIGS[env] ? env : 'development';
 }
 
 export function createLoggerConfig(
-  overrides: Partial<LoggerConfig> = {}
+  overrides: Partial<LoggerConfig> = {},
 ): LoggerConfig {
   const environment = overrides.environment || getEnvironment();
   const baseConfig = ENVIRONMENT_CONFIGS[environment] || {};
@@ -174,40 +174,39 @@ export function createLoggerConfig(
 export function loadConfigFromEnv(): Partial<LoggerConfig> {
   const config: Partial<LoggerConfig> = {};
 
-  if (typeof process === "undefined") {
+  if (typeof process === 'undefined') {
     return config;
   }
 
   // Environment
-  if (process.env["LOGHORN_ENVIRONMENT"]) {
-    config.environment = process.env["LOGHORN_ENVIRONMENT"] as Environment;
+  if (process.env['LOGHORN_ENVIRONMENT']) {
+    config.environment = process.env['LOGHORN_ENVIRONMENT'] as Environment;
   }
 
   // Features
-  if (process.env["LOGHORN_ENABLE_COLORS"]) {
-    config.enableColors = process.env["LOGHORN_ENABLE_COLORS"] === "true";
+  if (process.env['LOGHORN_ENABLE_COLORS']) {
+    config.enableColors = process.env['LOGHORN_ENABLE_COLORS'] === 'true';
   }
 
-  if (process.env["LOGHORN_ENABLE_EMOJIS"]) {
-    config.enableEmojis = process.env["LOGHORN_ENABLE_EMOJIS"] === "true";
+  if (process.env['LOGHORN_ENABLE_EMOJIS']) {
+    config.enableEmojis = process.env['LOGHORN_ENABLE_EMOJIS'] === 'true';
   }
 
-  if (process.env["LOGHORN_ENABLE_TIMESTAMPS"]) {
-    config.enableTimestamps =
-      process.env["LOGHORN_ENABLE_TIMESTAMPS"] === "true";
+  if (process.env['LOGHORN_ENABLE_TIMESTAMPS']) {
+    config.enableTimestamps = process.env['LOGHORN_ENABLE_TIMESTAMPS'] === 'true';
   }
 
-  if (process.env["LOGHORN_ENABLE_STACK_TRACES"]) {
+  if (process.env['LOGHORN_ENABLE_STACK_TRACES']) {
     config.enableStackTraces =
-      process.env["LOGHORN_ENABLE_STACK_TRACES"] === "true";
+      process.env['LOGHORN_ENABLE_STACK_TRACES'] === 'true';
   }
 
-  if (process.env["LOGHORN_ENABLE_JSON"]) {
-    config.enableJSON = process.env["LOGHORN_ENABLE_JSON"] === "true";
+  if (process.env['LOGHORN_ENABLE_JSON']) {
+    config.enableJSON = process.env['LOGHORN_ENABLE_JSON'] === 'true';
   }
 
-  if (process.env["LOGHORN_ENABLE_TABLE"]) {
-    config.enableTable = process.env["LOGHORN_ENABLE_TABLE"] === "true";
+  if (process.env['LOGHORN_ENABLE_TABLE']) {
+    config.enableTable = process.env['LOGHORN_ENABLE_TABLE'] === 'true';
   }
 
   // Log levels
@@ -218,7 +217,7 @@ export function loadConfigFromEnv(): Partial<LoggerConfig> {
     if (process.env[envKey] !== undefined) {
       logLevels[level as LogLevel] = {
         ...logLevels[level as LogLevel],
-        enabled: process.env[envKey] === "true",
+        enabled: process.env[envKey] === 'true',
       };
     }
   });
@@ -226,15 +225,15 @@ export function loadConfigFromEnv(): Partial<LoggerConfig> {
   config.logLevels = logLevels;
 
   // Middleware
-  if (process.env["LOGHORN_MIDDLEWARE_ENABLED"]) {
+  if (process.env['LOGHORN_MIDDLEWARE_ENABLED']) {
     config.middleware = {
-      enabled: process.env["LOGHORN_MIDDLEWARE_ENABLED"] === "true",
-      logRequests: process.env["LOGHORN_MIDDLEWARE_LOG_REQUESTS"] === "true",
-      logResponses: process.env["LOGHORN_MIDDLEWARE_LOG_RESPONSES"] === "true",
-      logErrors: process.env["LOGHORN_MIDDLEWARE_LOG_ERRORS"] === "true",
+      enabled: process.env['LOGHORN_MIDDLEWARE_ENABLED'] === 'true',
+      logRequests: process.env['LOGHORN_MIDDLEWARE_LOG_REQUESTS'] === 'true',
+      logResponses: process.env['LOGHORN_MIDDLEWARE_LOG_RESPONSES'] === 'true',
+      logErrors: process.env['LOGHORN_MIDDLEWARE_LOG_ERRORS'] === 'true',
       excludePaths:
-        process.env["LOGHORN_MIDDLEWARE_EXCLUDE_PATHS"]
-          ?.split(",")
+        process.env['LOGHORN_MIDDLEWARE_EXCLUDE_PATHS']
+          ?.split(',')
           .map((p) => p.trim()) || [],
     };
   }

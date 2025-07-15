@@ -14,12 +14,12 @@ export class ColorManager {
 
     // Dynamically import chalk only in Node.js environment
     if (
-      typeof globalThis !== "undefined" &&
-      "window" in globalThis === false &&
+      typeof globalThis !== 'undefined' &&
+      'window' in globalThis === false &&
       this.enableColors
     ) {
       try {
-        this.chalk = require("chalk");
+        this.chalk = require('chalk');
       } catch {
         this.chalk = null;
       }
@@ -38,7 +38,7 @@ export class ColorManager {
     }
 
     // Browser environment
-    if (typeof globalThis !== "undefined" && "window" in globalThis) {
+    if (typeof globalThis !== 'undefined' && 'window' in globalThis) {
       return this.colorizeForBrowser(text, color);
     }
 
@@ -52,7 +52,7 @@ export class ColorManager {
 
   private colorizeForBrowser(text: string, color: string): string {
     // Convert hex colors to CSS
-    if (color.startsWith("#")) {
+    if (color.startsWith('#')) {
       return `%c${text}`;
     }
 
@@ -64,7 +64,7 @@ export class ColorManager {
     if (!this.chalk) return text;
 
     // Convert hex colors to chalk colors
-    if (color.startsWith("#")) {
+    if (color.startsWith('#')) {
       return this.chalk.hex(color)(text);
     }
 
@@ -91,20 +91,20 @@ export class ColorManager {
       color = customColor;
     }
 
-    if (color.startsWith("#")) {
+    if (color.startsWith('#')) {
       return color;
     }
 
     const colorMap: Record<string, string> = {
-      red: "#dc3545",
-      green: "#28a745",
-      blue: "#007bff",
-      yellow: "#ffc107",
-      purple: "#6f42c1",
-      cyan: "#17a2b8",
-      gray: "#6c757d",
-      white: "#ffffff",
-      black: "#000000",
+      red: '#dc3545',
+      green: '#28a745',
+      blue: '#007bff',
+      yellow: '#ffc107',
+      purple: '#6f42c1',
+      cyan: '#17a2b8',
+      gray: '#6c757d',
+      white: '#ffffff',
+      black: '#000000',
     };
 
     return colorMap[color] || color;
