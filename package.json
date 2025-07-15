@@ -28,6 +28,7 @@
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "packageManager": "pnpm@10.13.1",
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
