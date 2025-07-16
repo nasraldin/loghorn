@@ -1,28 +1,31 @@
-# Loghorn 🎺
+# Loghorn 🦄
 
 A powerful, flexible, and production-ready logging library for Node.js and browsers
 with support for multiple frameworks and environments.
 
 [![npm version](https://badge.fury.io/js/loghorn.svg)](https://badge.fury.io/js/loghorn)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8+-blue.svg)](https://www.typescriptlang.org/)
 
 ## ✨ Features
 
-- 🚀 **Universal**: Works in Node.js, browsers, and all major frameworks
-- 🎨 **Beautiful**: Colored output, emojis, and customizable formatting
-- 📊 **Structured**: JSON logging with context and metadata
-- 🕒 **Timing**: Built-in performance measurement
-- 📋 **Tables**: Console table support with fallback
-- 📁 **Groups**: Organized logging with collapsible groups
-- 🔧 **Flexible**: Extensive configuration options
-- 🛡️ **Robust**: Production-ready with error handling
-- 🧪 **Tested**: Comprehensive test coverage
-- 🌍 **Environment-aware**: Automatic configuration based on NODE_ENV
-- 🔌 **Framework Integration**: Express, Fastify, NestJS, React, Vue, Angular,
-  Next.js
+- **Universal**: Works in Node.js and browsers
+- **Framework Support**: Express, Fastify, Next.js
+- **Environment Aware**: Automatic configuration based on environment
+- **Professional Output**: Elegant console output with colors and emojis
+- **Structured Logging**: JSON format for production environments
+- **Header Customization**: Control emoji, timestamp, level, and project name
+  display
+- **Group Logging**: Organize logs with collapsible groups
+- **Table Logging**: Beautiful table output for data visualization
+- **Context Management**: Add request IDs, user info, and custom context
+- **Performance Tracking**: Built-in timing and performance logging
+- **Error Handling**: Comprehensive error logging with stack traces
+- **Middleware**: Request/response logging for web frameworks
 
-## 📦 Installation
+## 🚀 Quick Start
+
+### 📦 Installation
 
 ```bash
 npm install loghorn
@@ -32,38 +35,67 @@ yarn add loghorn
 pnpm add loghorn
 ```
 
-## 🚀 Quick Start
-
 ### Basic Usage
 
 ```javascript
-import { Logger } from 'loghorn';
+import { createLogger } from 'loghorn';
 
-const logger = new Logger();
+const logger = createLogger();
 
-logger.info('Hello, World!');
-logger.success('Operation completed!');
-logger.error('Something went wrong', error);
+logger.info('Hello, LogHorn!');
+logger.warn('This is a warning');
+logger.error('Something went wrong', { error: 'details' });
 ```
 
-### Using the Default Logger
+### Framework Integration
+
+#### Express.js
 
 ```javascript
-import { error, info, logger, success } from 'loghorn';
+import express from 'express';
+import { createLogger, createLoggingMiddleware } from 'loghorn';
 
-info('Application started');
-success('User logged in successfully');
-error('Database connection failed', error);
+const app = express();
+const logger = createLogger();
+
+// Basic middleware
+app.use(createLoggingMiddleware(logger));
+
+// Custom middleware configuration
+app.use(
+  createLoggingMiddleware(logger, {
+    logRequests: true,
+    logResponses: true,
+    logErrors: true,
+    excludePaths: ['/health', '/metrics'],
+  }),
+);
 ```
 
-### Environment-Based Configuration
+#### Fastify
 
-Loghorn automatically configures itself based on your `NODE_ENV`:
+```javascript
+import Fastify from 'fastify';
+import { createLogger, fastifyLoghorn } from 'loghorn';
 
-- **Development**: Colorful output with emojis and debug logs
-- **Production**: JSON format, no colors, minimal logging
-- **Test**: JSON format, minimal output
-- **Staging**: Balanced configuration for testing
+const fastify = Fastify();
+const logger = createLogger();
+
+// Register the plugin
+await fastify.register(fastifyLoghorn, { logger });
+```
+
+#### Next.js
+
+```javascript
+import { createNextJSLogger } from 'loghorn';
+
+const logger = createNextJSLogger({
+  enableSSRLogging: true,
+  enableAPILogging: true,
+  enablePageLogging: true,
+});
+```
 
 ## 📚 API Reference
 
@@ -137,28 +169,38 @@ await logger.groupAsync('API Request Processing', async () => {
 #### Nested Groups with Context
 
 ```javascript
-logger.group('Order Processing', () => {
-  logger.setContext({ orderId: '12345', userId: 'user123' });
-  logger.info('Starting order processing');
+logger.group('User Session', { userId: '123' }, () => {
+  logger.info('Session started');
 
-  logger.group('Payment Processing', () => {
-    logger.setContext({ paymentMethod: 'credit_card' });
-    logger.info('Validating payment method');
-    logger.success('Payment processed successfully');
+  logger.group('Database Query', () => {
+    logger.info('Executing SELECT query');
+    logger.info('Query completed', { rows: 42 });
   });
 
-  logger.group('Inventory Check', () => {
-    logger.info('Checking inventory levels');
-    logger.success('Inventory reserved');
-  });
-
-  logger.success('Order processed successfully');
+  logger.success('Session completed');
 });
 ```
 
-### Timing
+### Table Logging
 
-Measure performance with built-in timing:
+Display data in beautiful table format:
+
+```javascript
+// Array of objects
+logger.table('Users', [
+  { name: 'John', age: 30, city: 'NYC' },
+  { name: 'Jane', age: 25, city: 'LA' },
+]);
+
+// Object with key-value pairs
+logger.table('Configuration', {
+  environment: 'production',
+  port: 3000,
+  database: 'postgresql',
+});
+```
+
+### Time Tracking
 
 ```javascript
 logger.time('Database Query');
@@ -166,66 +208,92 @@ logger.time('Database Query');
 logger.timeEnd('Database Query');
 ```
 
-### Table Logging
-
-Display structured data in table format:
-
-```javascript
-const users = [
-  { name: 'John', age: 30, city: 'NYC' },
-  { name: 'Jane', age: 25, city: 'LA' },
-  { name: 'Bob', age: 35, city: 'Chicago' },
-];
-
-logger.table('User Data', users);
-```
-
 ## ⚙️ Configuration
 
-### Basic Configuration
+### Environment-Based Configuration
+
+LogHorn automatically configures itself based on your environment:
+
+#### Development
+
+- ✅ Colors enabled
+- ✅ Emojis enabled
+- ✅ Timestamps enabled
+- ✅ Stack traces enabled
+- ✅ Elegant console output
+- ✅ Table logging enabled
+- ✅ Debug and trace logs enabled
+- ✅ Request/response logging
+
+#### Production
+
+- ❌ Colors disabled
+- ❌ Emojis disabled
+- ✅ Timestamps enabled
+- ❌ Stack traces disabled
+- ✅ Structured JSON format
+- ❌ Debug and trace logs disabled
+- ❌ Request/response logging (errors only)
+
+#### Test
+
+- ❌ Colors disabled
+- ❌ Emojis disabled
+- ❌ Timestamps disabled
+- ❌ Stack traces disabled
+- ✅ JSON format
+- ❌ All middleware disabled
+
+### Custom Configuration
 
 ```javascript
-import { Logger } from 'loghorn';
+import { createLogger } from 'loghorn';
 
-const logger = new Logger({
+const logger = createLogger({
   environment: 'development',
   enableColors: true,
   enableEmojis: true,
   enableTimestamps: true,
   enableStackTraces: true,
-  enableJSON: false,
+  enableJSON: false, // Use elegant console output
+  prettyJSON: 2, // Pretty print JSON
   enableTable: true,
-});
-```
+  projectName: 'my-app',
 
-### Advanced Configuration
+  // Header display options
+  showEmoji: true,
+  showTimestamp: true,
+  showLevel: true,
+  showProjectName: true,
+  showHeader: true,
 
-```javascript
-const logger = new Logger({
-  environment: 'production',
-  logLevels: {
-    trace: { enabled: false, color: '#6f42c1', emoji: '🔍' },
-    debug: { enabled: false, color: '#6c757d', emoji: '🐛' },
-    info: { enabled: true, color: '#17a2b8', emoji: 'ℹ️' },
-    warn: { enabled: true, color: '#ffc107', emoji: '⚠️' },
-    error: { enabled: true, color: '#dc3545', emoji: '❌' },
-    log: { enabled: true, color: '#28a745', emoji: '📝' },
-  },
+  // Custom colors and emojis
   customColors: {
     success: '#28a745',
     failure: '#dc3545',
+    custom: '#6f42c1',
   },
   customEmojis: {
-    success: '✅',
-    failure: '❌',
+    success: '🎉',
+    failure: '💥',
+    custom: '🔧',
   },
-  prettyJSON: 2, // 2-space indentation for JSON
+
+  // Log levels
+  logLevels: {
+    debug: { enabled: true, color: '#6c757d', emoji: '🔧' },
+    info: { enabled: true, color: '#17a2b8', emoji: '💡' },
+    warn: { enabled: true, color: '#ffc107', emoji: '⚡' },
+    error: { enabled: true, color: '#dc3545', emoji: '💥' },
+    trace: { enabled: true, color: '#6f42c1', emoji: '🔬' },
+    log: { enabled: true, color: '#28a745', emoji: '📋' },
+  },
 });
 ```
 
 ### Environment Variables
 
-Configure Loghorn using environment variables:
+Configure LogHorn using environment variables:
 
 ```bash
 # Environment
@@ -239,6 +307,13 @@ LOGHORN_ENABLE_STACK_TRACES=false
 LOGHORN_ENABLE_JSON=true
 LOGHORN_ENABLE_TABLE=true
 
+# Header display options
+LOGHORN_SHOW_EMOJI=true
+LOGHORN_SHOW_TIMESTAMP=true
+LOGHORN_SHOW_LEVEL=true
+LOGHORN_SHOW_PROJECT_NAME=true
+LOGHORN_SHOW_HEADER=true
+
 # Log Levels
 LOGHORN_DEBUG_ENABLED=false
 LOGHORN_TRACE_ENABLED=false
@@ -251,101 +326,103 @@ LOGHORN_MIDDLEWARE_LOG_ERRORS=true
 LOGHORN_MIDDLEWARE_EXCLUDE_PATHS=/health,/metrics
 ```
 
-## 🔌 Framework Integration
+## 🎨 Output Formats
 
-### Express.js
+### Elegant Console Output (Development)
 
-```javascript
-import express from 'express';
-import { createLoggingMiddleware, logger } from 'loghorn';
-
-const app = express();
-
-// Basic middleware
-app.use(createLoggingMiddleware(logger));
-
-// Custom middleware configuration
-app.use(
-  createLoggingMiddleware(logger, {
-    logRequests: true,
-    logResponses: true,
-    logErrors: true,
-    excludePaths: ['/health', '/metrics'],
-  }),
-);
+```
+💡 [my-app] [2024-01-15T10:30:45.123Z] [INFO] User authentication started
+✅ [my-app] [2024-01-15T10:30:45.456Z] [INFO] Authentication successful
+📊 [my-app] [2024-01-15T10:30:45.789Z] [INFO] 📊 User Data
+┌─ name ─┬─ age ─┬─ city ─┐
+│ John   │ 30    │ NYC    │
+│ Jane   │ 25    │ LA     │
+└────────┴───────┴────────┘
 ```
 
-### Fastify
+### Structured JSON Output (Production)
 
-```javascript
-import Fastify from 'fastify';
-import { fastifyLoghorn } from 'loghorn';
-
-const fastify = Fastify();
-
-// Register the plugin
-await fastify.register(fastifyLoghorn, { logger });
+```json
+{
+  "timestamp": "2024-01-15T10:30:45.123Z",
+  "level": "INFO",
+  "message": "User authentication started",
+  "project": "my-app",
+  "context": {
+    "requestId": "req-123",
+    "userId": "user-456"
+  }
+}
 ```
 
-### NestJS
+### Browser Console Output
+
+Professional browser console output with colors and grouping:
 
 ```javascript
-import { NestJSLogger } from 'loghorn';
-
-const logger = new NestJSLogger({
-  enableDecorators: true,
-  enableInterceptors: true,
-  enableGuards: true,
-});
-
-app.useLogger(logger);
+// Browser console with colors and groups
+logger.info('User action', { userId: '123', action: 'login' });
+// Outputs: %c💡 [my-app] [INFO] User action with CSS styling
 ```
 
-### React
+## 🔧 Advanced Usage
+
+### Custom Color Management
 
 ```javascript
-import { ReactLogger } from 'loghorn';
+import { ColorManager } from 'loghorn';
 
-const logger = new ReactLogger({
-  enableComponentLogging: true,
-  enableHookLogging: true,
-  enableStateLogging: true,
+const colorManager = new ColorManager({
+  enableColors: true,
+  customColors: {
+    success: '#28a745',
+    failure: '#dc3545',
+    custom: '#6f42c1',
+  },
 });
 ```
 
-### Vue
+### Error Handling
 
 ```javascript
-import { VueLogger } from 'loghorn';
+logger.group('Error Handling Demo', () => {
+  logger.info('Starting operation');
 
-const logger = new VueLogger({
-  enableComponentLogging: true,
-  enableLifecycleLogging: true,
-  enableReactivityLogging: true,
+  try {
+    throw new Error('Simulated error');
+  } catch (error) {
+    logger.error('Operation failed', error);
+  }
+
+  logger.info('Error handled gracefully');
 });
 ```
 
-### Angular
+### Performance Monitoring
 
 ```javascript
-import { AngularLogger } from 'loghorn';
+logger.group('Performance Test', async () => {
+  logger.time('Database Query');
 
-const logger = new AngularLogger({
-  enableComponentLogging: true,
-  enableServiceLogging: true,
-  enableGuardLogging: true,
+  // Simulate database operation
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  logger.timeEnd('Database Query');
+  logger.success('Performance test completed');
 });
 ```
 
-### Next.js
+### Request Context
 
 ```javascript
-import { NextJSLogger } from 'loghorn';
-
-const logger = new NextJSLogger({
-  enableSSRLogging: true,
-  enableAPILogging: true,
-  enablePageLogging: true,
+// In Express middleware
+app.use((req, res, next) => {
+  logger.setContext({
+    requestId: req.headers['x-request-id'],
+    userId: req.user?.id,
+    sessionId: req.session?.id,
+  });
+  next();
 });
 ```
 
@@ -357,8 +434,11 @@ const logger = new NextJSLogger({
 - ✅ Emojis enabled
 - ✅ Timestamps enabled
 - ✅ Stack traces enabled
+- ✅ Elegant console output
+- ✅ Table logging enabled
 - ✅ Debug and trace logs enabled
 - ✅ Request/response logging
+- ✅ All middleware enabled
 
 ### Production
 
@@ -366,6 +446,7 @@ const logger = new NextJSLogger({
 - ❌ Emojis disabled
 - ✅ Timestamps enabled
 - ❌ Stack traces disabled
+- ✅ Structured JSON format
 - ❌ Debug and trace logs disabled
 - ❌ Request/response logging (errors only)
 
@@ -387,98 +468,57 @@ const logger = new NextJSLogger({
 - ✅ JSON format
 - ✅ Request/response logging
 
-## 🔧 Advanced Usage
+## 📦 Exports
 
-### Custom Color Management
-
-```javascript
-import { ColorManager } from 'loghorn';
-
-const colorManager = new ColorManager({
-  enableColors: true,
-  customColors: {
-    success: '#28a745',
-    failure: '#dc3545',
-    custom: '#6f42c1',
-  },
-});
-```
-
-### Factory Function
+### Core Exports
 
 ```javascript
-import { createLogger } from 'loghorn';
-
-const logger = createLogger({
-  enableColors: true,
-  enableEmojis: true,
-});
+import { ColorManager, createLogger, createNextJSLogger, Logger } from 'loghorn';
 ```
 
-### Error Handling
+### Convenience Methods
 
 ```javascript
-logger.group('Error Handling Demo', () => {
-  logger.info('Starting operation');
-
-  try {
-    throw new Error('Simulated error');
-  } catch (error) {
-    logger.error('Operation failed', error);
-  }
-
-  logger.info('Error handled gracefully');
-});
+import {
+  debug,
+  end,
+  error,
+  failure,
+  group,
+  groupAsync,
+  groupCollapsed,
+  info,
+  log,
+  start,
+  success,
+  table,
+  time,
+  timeEnd,
+  trace,
+  warn,
+} from 'loghorn';
 ```
 
-### Async Error Handling
+### Middleware
 
 ```javascript
-try {
-  await logger.groupAsync('Async Error Demo', async () => {
-    logger.info('Starting async operation');
-
-    // Simulate async error
-    await Promise.reject(new Error('Async error'));
-
-    logger.info('This should not be reached');
-  });
-} catch (error) {
-  logger.error('Caught async error outside group');
-}
+import {
+  createLoggingMiddleware,
+  createMorganMiddleware,
+  fastifyLoghorn,
+} from 'loghorn';
 ```
 
-## 🛡️ Production Features
+### Configuration
 
-- **Circular Reference Safe**: Handles circular references gracefully
-- **Memory Protection**: Hard limits on data sizes to prevent memory issues
-- **Error Recovery**: Never crashes your application
-- **Performance Optimized**: Efficient string operations and minimal overhead
-- **Type Safe**: Full TypeScript support with comprehensive type definitions
-- **Environment Detection**: Automatic configuration based on NODE_ENV
-- **Middleware Support**: Built-in Express and Fastify middleware
-- **Framework Integration**: Native support for popular frameworks
-
-## 📊 Performance
-
-Loghorn is designed for high-performance logging:
-
-- **Minimal Overhead**: Efficient string operations and conditional logging
-- **Memory Safe**: Automatic truncation of large log entries
-- **Async Ready**: Non-blocking async operations
-- **Production Optimized**: Disabled features in production for maximum performance
-
-## 🧪 Testing
-
-```bash
-# Run tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with coverage
-npm run coverage
+```javascript
+import {
+  createLoggerConfig,
+  DEFAULT_LOG_LEVELS,
+  ENVIRONMENT_CONFIGS,
+  getEnvironment,
+  loadConfigFromEnv,
+} from 'loghorn';
 ```
 
 ## 🤝 Contributing
@@ -486,42 +526,15 @@ npm run coverage
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for
 details.
 
-### Development Setup
-
-1. Fork the repository
-2. Clone your fork: `git clone https://github.com/yourusername/loghorn.git`
-3. Install dependencies: `npm install`
-4. Create a feature branch: `git checkout -b feature/amazing-feature`
-5. Make your changes
-6. Run tests: `npm test`
-7. Submit a pull request
-
-### Code Style
-
-- We use ESLint and Prettier for code formatting
-- Run `npm run lint` to check for issues
-- Run `npm run lint:fix` to automatically fix issues
-- Run `npm run format` to format code with Prettier
-
-## 📝 License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for
 details.
 
-## 👨‍💻 Author
-
-**Nasr Aldin** - [@nasraldin](https://github.com/nasraldin)
-
-- Website: [https://nasraldin.com](https://nasraldin.com)
-- Email: ns@nasraldin.com
-
 ## 🙏 Acknowledgments
 
 - Built with TypeScript for type safety
-- Uses Chalk for beautiful terminal colors
-- Safe-stable-stringify for reliable JSON serialization
-- Comprehensive test suite with Jest
-
----
-
-**Made with ❤️ by Nasr Aldin**
+- Uses [chalk](https://github.com/chalk/chalk) for terminal colors
+- Uses [safe-stable-stringify](https://github.com/BridgeAR/safe-stable-stringify)
+  for safe JSON serialization
+- Inspired by modern logging practices and frameworks

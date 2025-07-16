@@ -72,15 +72,15 @@ const eslintConfig = [
     },
   },
   {
-    ignores: [
-      'node_modules',
-      '.history',
-      'dist',
-      'package',
-      'coverage',
-      'examples',
-      'tests',
-    ],
+    files: ['examples/**/*.js'],
+    rules: {
+      'no-console': 'off',
+      'no-var-requires': 'off',
+      'no-undef': 'off',
+    },
+  },
+  {
+    ignores: ['node_modules', '.history', 'dist', 'package', 'coverage', 'tests'],
   },
 ];
 

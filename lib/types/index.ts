@@ -11,6 +11,13 @@ export interface LogConfig {
   enabled: boolean;
 }
 
+export interface PartialLogConfig {
+  level?: LogLevel;
+  color?: string;
+  emoji?: string;
+  enabled?: boolean;
+}
+
 export interface LoggerConfig {
   environment: Environment;
   logLevels: Record<LogLevel, LogConfig>;
@@ -25,6 +32,13 @@ export interface LoggerConfig {
   enableTable?: boolean;
   customColors?: Record<string, string>;
   customEmojis?: Record<string, string>;
+  projectName?: string;
+  // Header display options
+  showEmoji?: boolean;
+  showTimestamp?: boolean;
+  showLevel?: boolean;
+  showProjectName?: boolean;
+  showHeader?: boolean; // Master switch to show/hide entire header
   middleware?: {
     enabled: boolean;
     logRequests: boolean;
@@ -34,24 +48,19 @@ export interface LoggerConfig {
   };
 }
 
+export interface PartialLoggerConfig extends Partial<LoggerConfig> {}
+
 export interface LogEntry {
   timestamp: string;
   level: LogLevel;
   message: string;
   data?: unknown;
+  context?: LogContext;
   stack?: string;
-  context?: Record<string, unknown>;
-  requestId?: string;
-  userId?: string;
-  sessionId?: string;
 }
 
-export interface LogContext {
-  requestId?: string;
-  userId?: string;
-  sessionId?: string;
-  groupDepth?: number;
-  [key: string]: unknown;
+export interface LogContext extends Record<string, unknown> {
+  // Additional context properties can be added here
 }
 
 export interface ExpressRequest extends Request {
@@ -75,47 +84,17 @@ export interface MiddlewareOptions {
   logResponses?: boolean;
   logErrors?: boolean;
   excludePaths?: string[];
-  customFormat?: (
-    req: ExpressRequest,
-    res: ExpressResponse,
-    next: NextFunction,
-  ) => void;
+  customFormat?: (req: any, res: any, next?: any) => void;
 }
 
-export interface BrowserLoggerConfig extends Omit<LoggerConfig, 'middleware'> {
-  enableConsoleMethods: boolean;
-  enableGrouping: boolean;
-  maxGroupDepth: number;
-}
-
-export interface NestJSLoggerConfig extends LoggerConfig {
-  enableDecorators: boolean;
-  enableInterceptors: boolean;
-  enableGuards: boolean;
-}
-
-export interface ReactLoggerConfig extends BrowserLoggerConfig {
-  enableComponentLogging: boolean;
-  enableHookLogging: boolean;
-  enableStateLogging: boolean;
-}
-
-export interface VueLoggerConfig extends BrowserLoggerConfig {
-  enableComponentLogging: boolean;
-  enableLifecycleLogging: boolean;
-  enableReactivityLogging: boolean;
-}
-
-export interface AngularLoggerConfig extends BrowserLoggerConfig {
-  enableComponentLogging: boolean;
-  enableServiceLogging: boolean;
-  enableGuardLogging: boolean;
-}
-
-export interface NextJSLoggerConfig extends BrowserLoggerConfig {
-  enableSSRLogging: boolean;
-  enableAPILogging: boolean;
-  enablePageLogging: boolean;
+// Framework-specific configurations
+export interface NextJSLoggerConfig extends LoggerConfig {
+  enableSSRLogging?: boolean;
+  enableAPILogging?: boolean;
+  enablePageLogging?: boolean;
+  enableConsoleMethods?: boolean;
+  enableGrouping?: boolean;
+  maxGroupDepth?: number;
 }
 
 export interface GroupOptions {
@@ -123,9 +102,8 @@ export interface GroupOptions {
   context?: LogContext;
 }
 
-export interface AsyncGroupOptions {
-  collapsed?: boolean;
-  context?: LogContext;
+export interface AsyncGroupOptions extends GroupOptions {
+  // Additional options for async groups can be added here
 }
 
 // Re-export Express types for convenience

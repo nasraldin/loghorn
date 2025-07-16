@@ -1,8 +1,12 @@
 import { Logger } from './core/logger';
-import type { LoggerConfig } from './types';
+import { NextJSLogger } from './frameworks/nextjs';
+import type { NextJSLoggerConfig, PartialLoggerConfig } from './types';
 
 // Core exports
 export { Logger } from './core/logger';
+
+// Framework-specific loggers
+export { NextJSLogger } from './frameworks/nextjs';
 
 // Configuration exports
 export {
@@ -18,15 +22,12 @@ export type {
   LogLevel,
   Environment,
   LogConfig,
+  PartialLogConfig,
   LoggerConfig,
+  PartialLoggerConfig,
   LogEntry,
   LogContext,
   MiddlewareOptions,
-  BrowserLoggerConfig,
-  NestJSLoggerConfig,
-  ReactLoggerConfig,
-  VueLoggerConfig,
-  AngularLoggerConfig,
   NextJSLoggerConfig,
   GroupOptions,
   AsyncGroupOptions,
@@ -43,7 +44,7 @@ export {
 export { fastifyLoghorn } from './middleware/fastify';
 
 // Factory function for easy setup
-export function createLogger(config?: Partial<LoggerConfig>): Logger {
+export function createLogger(config?: PartialLoggerConfig): Logger {
   const { createLoggerConfig, loadConfigFromEnv } = require('./config');
 
   // Load environment configuration
@@ -58,24 +59,71 @@ export function createLogger(config?: Partial<LoggerConfig>): Logger {
   return new Logger(finalConfig);
 }
 
-// Default logger instance
-export const logger = createLogger();
+// Next.js specific factory function
+export function createNextJSLogger(
+  config?: Partial<NextJSLoggerConfig>,
+): NextJSLogger {
+  const { createLoggerConfig, loadConfigFromEnv } = require('./config');
+
+  // Load environment configuration
+  const envConfig = loadConfigFromEnv();
+
+  // Merge configurations with Next.js defaults
+  const finalConfig = createLoggerConfig({
+    ...envConfig,
+    ...config,
+  }) as NextJSLoggerConfig;
+
+  return new NextJSLogger(finalConfig);
+}
+
+// Default logger instance - lazy initialization
+let defaultLogger: Logger | null = null;
+
+function getDefaultLogger(): Logger {
+  if (!defaultLogger) {
+    defaultLogger = createLogger();
+  }
+  return defaultLogger;
+}
 
 // Convenience exports for common use cases
-export const debug = logger.debug.bind(logger);
-export const info = logger.info.bind(logger);
-export const warn = logger.warn.bind(logger);
-export const error = logger.error.bind(logger);
-export const trace = logger.trace.bind(logger);
-export const log = logger.logMessage.bind(logger);
+export const debug = (...args: Parameters<Logger['debug']>) =>
+  getDefaultLogger().debug(...args);
+export const info = (...args: Parameters<Logger['info']>) =>
+  getDefaultLogger().info(...args);
+export const warn = (...args: Parameters<Logger['warn']>) =>
+  getDefaultLogger().warn(...args);
+export const error = (...args: Parameters<Logger['error']>) =>
+  getDefaultLogger().error(...args);
+export const trace = (...args: Parameters<Logger['trace']>) =>
+  getDefaultLogger().trace(...args);
+export const log = (...args: Parameters<Logger['logMessage']>) =>
+  getDefaultLogger().logMessage(...args);
 
 // Convenience methods
-export const success = logger.success.bind(logger);
-export const failure = logger.failure.bind(logger);
-export const start = logger.start.bind(logger);
-export const end = logger.end.bind(logger);
-export const group = logger.group.bind(logger);
-export const groupCollapsed = logger.groupCollapsed.bind(logger);
-export const groupAsync = logger.groupAsync.bind(logger);
-export const time = logger.time.bind(logger);
-export const timeEnd = logger.timeEnd.bind(logger);
+export const success = (...args: Parameters<Logger['success']>) =>
+  getDefaultLogger().success(...args);
+export const failure = (...args: Parameters<Logger['failure']>) =>
+  getDefaultLogger().failure(...args);
+export const start = (...args: Parameters<Logger['start']>) =>
+  getDefaultLogger().start(...args);
+export const end = (...args: Parameters<Logger['end']>) =>
+  getDefaultLogger().end(...args);
+export const group = (...args: Parameters<Logger['group']>) =>
+  getDefaultLogger().group(...args);
+export const groupCollapsed = (...args: Parameters<Logger['groupCollapsed']>) =>
+  getDefaultLogger().groupCollapsed(...args);
+export const groupAsync = (...args: Parameters<Logger['groupAsync']>) =>
+  getDefaultLogger().groupAsync(...args);
+export const time = (...args: Parameters<Logger['time']>) =>
+  getDefaultLogger().time(...args);
+export const timeEnd = (...args: Parameters<Logger['timeEnd']>) =>
+  getDefaultLogger().timeEnd(...args);
+
+// Export the default logger instance
+export const logger = new Proxy({} as Logger, {
+  get(_target, prop) {
+    return getDefaultLogger()[prop as keyof Logger];
+  },
+});

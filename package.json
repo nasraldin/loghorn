@@ -42,7 +42,7 @@
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
-    "chalk": "^5.4.1",
+    "chalk": "^4.1.2",
     "express": "5.1.0",
     "fastify": "5.4.0",
     "morgan": "^1.10.0",

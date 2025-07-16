@@ -28,32 +28,6 @@ export class Logger {
     return this.config.logLevels[level]?.enabled ?? false;
   }
 
-  private formatMessage(level: LogLevel, message: string): string {
-    const logConfig = this.config.logLevels[level];
-    if (!logConfig) return message;
-
-    let formattedMessage = '';
-
-    // Add emoji if enabled
-    if (this.config.enableEmojis && logConfig.emoji) {
-      formattedMessage += `${logConfig.emoji} `;
-    }
-
-    // Add timestamp if enabled
-    if (this.config.enableTimestamps) {
-      const timestamp = new Date().toISOString();
-      formattedMessage += `[${timestamp}] `;
-    }
-
-    // Add level
-    formattedMessage += `[${level.toUpperCase()}] `;
-
-    // Add message
-    formattedMessage += message;
-
-    return formattedMessage;
-  }
-
   private createLogEntry(
     level: LogLevel,
     message: string,
@@ -90,76 +64,326 @@ export class Logger {
   }
 
   private logToConsole(level: LogLevel, message: string, data?: unknown): void {
+    try {
+      const logConfig = this.config.logLevels[level];
+      if (!logConfig) return;
+
+      // Browser environment
+      if (typeof globalThis !== 'undefined' && 'window' in globalThis) {
+        this.logToBrowserConsole(level, message, data, logConfig);
+        return;
+      }
+
+      // Node.js environment
+      this.logToNodeConsole(level, message, data, logConfig);
+    } catch (error) {
+      // Fallback to simple logging if anything fails
+      console.log(`[${level.toUpperCase()}] ${message}`, data);
+    }
+  }
+
+  /**
+   * Unified message formatting system
+   * This is the central method for all log formatting across the library
+   */
+  private formatMessage(
+    level: LogLevel,
+    message: string,
+    options?: {
+      format?: 'elegant' | 'structured' | 'compact' | 'minimal';
+      includeData?: boolean;
+      data?: unknown;
+    },
+  ): { formatted: string; raw: string; structured?: Record<string, unknown> } {
     const logConfig = this.config.logLevels[level];
-    if (!logConfig) return;
-
-    const formattedMessage = this.formatMessage(level, message);
-    const coloredMessage = this.colorManager.colorize(
-      formattedMessage,
-      logConfig.color,
-    );
-
-    // Browser environment
-    if (typeof globalThis !== 'undefined' && 'window' in globalThis) {
-      this.logToBrowserConsole(level, coloredMessage, data, logConfig.color);
-      return;
+    if (!logConfig) {
+      return { formatted: message, raw: message };
     }
 
-    // Node.js environment
-    this.logToNodeConsole(level, coloredMessage, data);
+    const format = options?.format || 'elegant';
+
+    // If showHeader is explicitly false, return minimal format
+    if (this.config.showHeader === false) {
+      return { formatted: message, raw: message };
+    }
+
+    switch (format) {
+      case 'minimal':
+        return { formatted: message, raw: message };
+
+      case 'compact':
+        return this.formatCompact(level, message);
+
+      case 'structured':
+        return this.formatStructured(level, message, options?.data);
+
+      case 'elegant':
+      default:
+        return this.formatElegant(level, message);
+    }
+  }
+
+  /**
+   * Elegant formatting with emoji, timestamp, level, and project name
+   */
+  private formatElegant(
+    level: LogLevel,
+    message: string,
+  ): { formatted: string; raw: string } {
+    const logConfig = this.config.logLevels[level];
+    if (!logConfig) return { formatted: message, raw: message };
+
+    let output = '';
+
+    // Add emoji if enabled and not explicitly disabled
+    if (
+      this.config.enableEmojis &&
+      this.config.showEmoji !== false &&
+      logConfig.emoji
+    ) {
+      output += `${logConfig.emoji} `;
+    }
+
+    // Add project name if enabled and available
+    if (this.config.showProjectName !== false) {
+      const projectName = this.getProjectName();
+      if (projectName) {
+        output += `[${projectName}] `;
+      }
+    }
+
+    // Add timestamp if enabled and not explicitly disabled
+    if (this.config.enableTimestamps && this.config.showTimestamp !== false) {
+      const timestamp = new Date().toISOString();
+      output += `[${timestamp}] `;
+    }
+
+    // Add level if not explicitly disabled
+    if (this.config.showLevel !== false) {
+      output += `[${level.toUpperCase()}] `;
+    }
+
+    // Add message
+    output += message;
+
+    return { formatted: output, raw: message };
+  }
+
+  /**
+   * Compact formatting with minimal elements
+   */
+  private formatCompact(
+    level: LogLevel,
+    message: string,
+  ): { formatted: string; raw: string } {
+    let output = '';
+
+    // Add timestamp
+    if (this.config.enableTimestamps) {
+      const timestamp = new Date().toISOString();
+      output += `${timestamp} `;
+    }
+
+    // Add level
+    output += `${level.toUpperCase()} `;
+
+    // Add project name if available
+    const projectName = this.getProjectName();
+    if (projectName) {
+      output += `[${projectName}] `;
+    }
+
+    // Add message
+    output += message;
+
+    return { formatted: output, raw: message };
+  }
+
+  /**
+   * Structured JSON formatting for log aggregation
+   */
+  private formatStructured(
+    level: LogLevel,
+    message: string,
+    data?: unknown,
+  ): { formatted: string; raw: string; structured: Record<string, unknown> } {
+    const logConfig = this.config.logLevels[level];
+    if (!logConfig) {
+      return { formatted: message, raw: message, structured: { message } };
+    }
+
+    const structured: Record<string, unknown> = {
+      timestamp: new Date().toISOString(),
+      level: level.toUpperCase(),
+      message,
+    };
+
+    // Add project name if available
+    const projectName = this.getProjectName();
+    if (projectName) {
+      structured['project'] = projectName;
+    }
+
+    // Add context if available
+    if (Object.keys(this.context).length > 0) {
+      structured['context'] = this.context;
+    }
+
+    // Add data if provided
+    if (data !== undefined) {
+      structured['data'] = data;
+    }
+
+    const indent =
+      typeof this.config.prettyJSON === 'number'
+        ? this.config.prettyJSON
+        : this.config.prettyJSON === true
+          ? 2
+          : 0;
+
+    const formatted = JSON.stringify(structured, null, indent);
+    return { formatted, raw: message, structured };
+  }
+
+  private getProjectName(): string | null {
+    // First check if project name is set in context
+    if (this.context['projectName']) {
+      return this.context['projectName'] as string;
+    }
+
+    // Then check config
+    if (this.config.projectName) {
+      return this.config.projectName;
+    }
+
+    // Then check environment variables (Node.js only)
+    if (typeof process !== 'undefined' && process.env) {
+      return (
+        process.env['LOGHORN_PROJECT_NAME'] ||
+        process.env['PROJECT_NAME'] ||
+        process.env['APP_NAME'] ||
+        process.env['NEXT_PUBLIC_APP_NAME'] ||
+        process.env['VITE_APP_NAME'] ||
+        process.env['REACT_APP_NAME'] ||
+        process.env['npm_package_name'] ||
+        null
+      );
+    }
+
+    return null;
   }
 
   private logToBrowserConsole(
     level: LogLevel,
     message: string,
     data?: unknown,
-    color?: string,
+    logConfig?: any,
   ): void {
-    const consoleMethod =
-      level === 'error'
-        ? 'error'
-        : level === 'warn'
-          ? 'warn'
-          : level === 'debug'
-            ? 'debug'
-            : 'log';
+    try {
+      const consoleMethod =
+        level === 'error'
+          ? 'error'
+          : level === 'warn'
+            ? 'warn'
+            : level === 'debug'
+              ? 'debug'
+              : 'log';
 
-    if (data !== undefined) {
-      if (color && this.config.enableColors) {
-        console[consoleMethod](
-          message,
-          `color: ${this.colorManager.getCSSColor(color)}`,
-          data,
-        );
+      // Use unified formatting system
+      const { formatted } = this.formatMessage(level, message, {
+        format: 'elegant',
+      });
+
+      // Professional browser logging with structured data
+      if (data !== undefined) {
+        // Use console.group for better data organization
+        if (typeof console.group === 'function') {
+          console.group(
+            `%c${formatted}`,
+            logConfig?.color && this.config.enableColors
+              ? `color: ${this.colorManager.getCSSColor(logConfig.color)}; font-weight: bold;`
+              : '',
+          );
+          console[consoleMethod](data);
+          console.groupEnd();
+        } else {
+          // Fallback for environments without console.group
+          if (logConfig?.color && this.config.enableColors) {
+            console[consoleMethod](
+              `%c${formatted}`,
+              `color: ${this.colorManager.getCSSColor(logConfig.color)}; font-weight: bold;`,
+            );
+          } else {
+            console[consoleMethod](formatted);
+          }
+          console[consoleMethod](data);
+        }
       } else {
-        console[consoleMethod](message, data);
+        // Simple message without data
+        if (logConfig?.color && this.config.enableColors) {
+          console[consoleMethod](
+            `%c${formatted}`,
+            `color: ${this.colorManager.getCSSColor(logConfig.color)}; font-weight: bold;`,
+          );
+        } else {
+          console[consoleMethod](formatted);
+        }
       }
-    } else {
-      if (color && this.config.enableColors) {
-        console[consoleMethod](
-          message,
-          `color: ${this.colorManager.getCSSColor(color)}`,
-        );
-      } else {
-        console[consoleMethod](message);
-      }
+    } catch (error) {
+      // Fallback to simple logging if browser console fails
+      console.log(`[${level.toUpperCase()}] ${message}`, data);
     }
   }
 
-  private logToNodeConsole(level: LogLevel, message: string, data?: unknown): void {
-    const consoleMethod =
-      level === 'error'
-        ? 'error'
-        : level === 'warn'
-          ? 'warn'
-          : level === 'debug'
-            ? 'debug'
-            : 'log';
+  private logToNodeConsole(
+    level: LogLevel,
+    message: string,
+    data?: unknown,
+    logConfig?: any,
+  ): void {
+    try {
+      const consoleMethod =
+        level === 'error'
+          ? 'error'
+          : level === 'warn'
+            ? 'warn'
+            : level === 'debug'
+              ? 'debug'
+              : 'log';
 
-    if (data !== undefined) {
-      console[consoleMethod](message, data);
-    } else {
-      console[consoleMethod](message);
+      // Use unified formatting system
+      const { formatted } = this.formatMessage(level, message, {
+        format: 'elegant',
+      });
+
+      if (data !== undefined) {
+        // Apply colors to the entire message if enabled
+        if (logConfig?.color && this.config.enableColors) {
+          const coloredMessage = this.colorManager.colorize(
+            formatted,
+            logConfig.color,
+          );
+          console[consoleMethod](coloredMessage);
+        } else {
+          console[consoleMethod](formatted);
+        }
+        // Log data separately for better formatting
+        console[consoleMethod](data);
+      } else {
+        // Apply colors to the entire message if enabled
+        if (logConfig?.color && this.config.enableColors) {
+          const coloredMessage = this.colorManager.colorize(
+            formatted,
+            logConfig.color,
+          );
+          console[consoleMethod](coloredMessage);
+        } else {
+          console[consoleMethod](formatted);
+        }
+      }
+    } catch (error) {
+      // Fallback to simple logging if console fails
+      console.log(`[${level.toUpperCase()}] ${message}`, data);
     }
   }
 
@@ -173,13 +397,24 @@ export class Logger {
       // Use safe-stable-stringify for JSON output
       const jsonString = stringify(entry, null, indent) || '';
       const MAX_JSON_SIZE = 10000;
+
       if (jsonString.length > MAX_JSON_SIZE) {
         console.warn(
           `[LOGHORN WARNING] JSON log entry too large (${jsonString.length} chars), truncating`,
         );
         console.log(jsonString.substring(0, MAX_JSON_SIZE) + '...');
       } else {
-        console.log(jsonString);
+        // Apply colors to JSON output if enabled
+        if (this.config.enableColors) {
+          const logConfig = this.config.logLevels[level];
+          const coloredJson = this.colorManager.colorize(
+            jsonString,
+            logConfig?.color || 'log',
+          );
+          console.log(coloredJson);
+        } else {
+          console.log(jsonString);
+        }
       }
     } catch (error) {
       // Fallback to simple logging if JSON serialization fails
@@ -193,10 +428,28 @@ export class Logger {
       return;
     }
 
+    // Choose output format based on configuration and environment
     if (this.config.enableJSON) {
       this.logToJSON(level, message, data);
+    } else if (this.config.environment === 'production') {
+      // Production: Use structured format for log aggregation
+      this.logToStructured(level, message, data);
     } else {
+      // Development: Use elegant console output
       this.logToConsole(level, message, data);
+    }
+  }
+
+  private logToStructured(level: LogLevel, message: string, data?: unknown): void {
+    try {
+      const { formatted } = this.formatMessage(level, message, {
+        format: 'structured',
+        data,
+      });
+      console.log(formatted);
+    } catch (error) {
+      // Fallback to simple logging if structured formatting fails
+      console.log(`[${level.toUpperCase()}] ${message}`, data);
     }
   }
 
@@ -226,11 +479,11 @@ export class Logger {
 
   // Convenience methods for common logging patterns
   success(message: string, data?: unknown): void {
-    this.info(`✅ ${message}`, data);
+    this.info(`✨ ${message}`, data);
   }
 
   failure(message: string, data?: unknown): void {
-    this.error(`❌ ${message}`, data);
+    this.error(`💥 ${message}`, data);
   }
 
   start(message: string, data?: unknown): void {
@@ -291,7 +544,7 @@ export class Logger {
       const groupContext = { ...this.context, ...context };
 
       this.setContext(groupContext);
-      this.info(`${indent}📁 ${label}`);
+      this.info(`${indent}📦 ${label}`);
 
       try {
         const result = fn();
@@ -302,22 +555,22 @@ export class Logger {
               const errorMessage =
                 error instanceof Error ? error.message : String(error);
               this.error(
-                `${indent}  ❌ Group execution failed: ${errorMessage}`,
+                `${indent}  💥 Group execution failed: ${errorMessage}`,
                 error,
               );
             })
             .finally(() => {
               this.setContext({ ...this.context });
-              this.info(`${indent}📁 End: ${label}`);
+              this.info(`${indent}📦 End: ${label}`);
             });
         } else {
           // Handle sync function
           this.setContext({ ...this.context });
-          this.info(`${indent}📁 End: ${label}`);
+          this.info(`${indent}📦 End: ${label}`);
         }
       } catch (error: unknown) {
         this.setContext({ ...this.context });
-        this.info(`${indent}📁 End: ${label}`);
+        this.info(`${indent}📦 End: ${label}`);
         throw error;
       }
     }
@@ -333,11 +586,11 @@ export class Logger {
   }
 
   // Async group support with explicit async/await
-  async groupAsync(
+  async groupAsync<T>(
     label: string,
-    fn: () => Promise<void>,
+    fn: () => Promise<T>,
     options?: { collapsed?: boolean; context?: LogContext },
-  ): Promise<void> {
+  ): Promise<T> {
     const { collapsed = false, context = {} } = options || {};
 
     if (typeof console !== 'undefined' && console.group) {
@@ -353,7 +606,8 @@ export class Logger {
       this.setContext({ ...this.context, ...context });
 
       try {
-        await fn();
+        const result = await fn();
+        return result;
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         this.error(`Group execution failed: ${errorMessage}`, error);
@@ -368,17 +622,18 @@ export class Logger {
       const groupContext = { ...this.context, ...context };
 
       this.setContext(groupContext);
-      this.info(`${indent}📁 ${label}`);
+      this.info(`${indent}📦 ${label}`);
 
       try {
-        await fn();
+        const result = await fn();
+        return result;
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        this.error(`${indent}  ❌ Group execution failed: ${errorMessage}`, error);
+        this.error(`${indent}  💥 Group execution failed: ${errorMessage}`, error);
         throw error;
       } finally {
         this.setContext({ ...this.context });
-        this.info(`${indent}📁 End: ${label}`);
+        this.info(`${indent}📦 End: ${label}`);
       }
     }
   }
@@ -440,9 +695,11 @@ export class Logger {
   ): void {
     try {
       if (typeof console !== 'undefined' && typeof console.table === 'function') {
-        const formattedMessage = this.formatMessage('info', `📊 ${label}`);
+        const { formatted } = this.formatMessage('info', `📊 ${label}`, {
+          format: 'elegant',
+        });
         const coloredMessage = this.colorManager.colorize(
-          formattedMessage,
+          formatted,
           this.config.logLevels.info.color,
         );
 
@@ -464,9 +721,11 @@ export class Logger {
     data: unknown[] | Record<string, unknown>,
   ): void {
     try {
-      const formattedMessage = this.formatMessage('info', `📊 ${label}`);
+      const { formatted } = this.formatMessage('info', `📊 ${label}`, {
+        format: 'elegant',
+      });
       const coloredMessage = this.colorManager.colorize(
-        formattedMessage,
+        formatted,
         this.config.logLevels.info.color,
       );
 
