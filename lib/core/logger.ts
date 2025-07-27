@@ -479,11 +479,11 @@ export class Logger {
 
   // Convenience methods for common logging patterns
   success(message: string, data?: unknown): void {
-    this.info(`✨ ${message}`, data);
+    this.info(`✅ ${message}`, data);
   }
 
   failure(message: string, data?: unknown): void {
-    this.error(`💥 ${message}`, data);
+    this.error(`❌ ${message}`, data);
   }
 
   start(message: string, data?: unknown): void {
@@ -555,7 +555,7 @@ export class Logger {
               const errorMessage =
                 error instanceof Error ? error.message : String(error);
               this.error(
-                `${indent}  💥 Group execution failed: ${errorMessage}`,
+                `${indent}  ❌ Group execution failed: ${errorMessage}`,
                 error,
               );
             })
@@ -629,7 +629,7 @@ export class Logger {
         return result;
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        this.error(`${indent}  💥 Group execution failed: ${errorMessage}`, error);
+        this.error(`${indent}  ❌ Group execution failed: ${errorMessage}`, error);
         throw error;
       } finally {
         this.setContext({ ...this.context });

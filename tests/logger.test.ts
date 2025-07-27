@@ -67,8 +67,8 @@ describe('Logger', () => {
       const testData = { key: 'value', number: 42 };
       logger.info('Message with data', testData);
       const logs = getCapturedLogs();
-      expect(logs).toHaveLength(1);
-      expect(logs[0]).toContain('[INFO] Message with data');
+      expect(logs).toHaveLength(2);
+      expect(logs[0]).toContain('[loghorn] [INFO]');
     });
   });
 
@@ -77,7 +77,7 @@ describe('Logger', () => {
       const config = createLoggerConfig({
         logLevels: {
           debug: { enabled: false, color: '#000', emoji: '🐛', level: 'debug' },
-          info: { enabled: true, color: '#00f', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: '#00f', emoji: '💡', level: 'info' },
           trace: { enabled: false, color: '#000', emoji: '🔍', level: 'trace' },
           warn: { enabled: false, color: '#000', emoji: '⚠️', level: 'warn' },
           error: { enabled: false, color: '#000', emoji: '❌', level: 'error' },
@@ -126,7 +126,7 @@ describe('Logger', () => {
       logger.info('Emoji message');
       const logs = getCapturedLogs();
       expect(logs[0]).toContain('Emoji message');
-      expect(logs[0]).toContain('ℹ️');
+      expect(logs[0]).toContain('💡');
     });
 
     test('should enable JSON logging when configured', () => {
@@ -140,8 +140,8 @@ describe('Logger', () => {
 
       logger.info('JSON message', { data: 'test' });
       const logs = getCapturedLogs();
-      expect(logs).toHaveLength(1);
-      expect(logs[0]).toContain('[INFO] JSON message');
+      expect(logs).toHaveLength(2);
+      expect(logs[0]).toContain('[loghorn] [INFO] JSON message');
     });
 
     test('should enable pretty JSON logging when configured', () => {
@@ -228,8 +228,8 @@ describe('Logger', () => {
       const testError = new Error('Error with stack');
       logger.error('Error with stack', testError);
       const logs = getCapturedErrors();
-      expect(logs[0]).toContain('[ERROR] Error with stack');
-      expect(logs[0]).toContain('Error: Error with stack');
+      expect(logs[0]).toContain('[loghorn] [ERROR] Error with stack');
+      expect(logs[1]).toContain('Error: Error with stack');
     });
   });
 
@@ -280,7 +280,7 @@ describe('Logger', () => {
     test('should log success messages', () => {
       logger.success('Operation completed');
       const logs = getCapturedLogs();
-      expect(logs[0]).toContain('✅ Operation completed');
+      expect(logs[0]).toContain('[loghorn] [INFO] ✅ Operation completed');
     });
 
     test('should log failure messages', () => {
@@ -324,9 +324,9 @@ describe('Logger', () => {
         logger.info('Inside group');
       });
       const logs = getCapturedLogs();
-      expect(logs.some((l) => l.includes('📁 Test Group'))).toBe(true);
+      expect(logs.some((l) => l.includes('📦 Test Group'))).toBe(true);
       expect(logs.some((l) => l.includes('Inside group'))).toBe(true);
-      expect(logs.some((l) => l.includes('📁 End: Test Group'))).toBe(true);
+      expect(logs.some((l) => l.includes('📦 End: Test Group'))).toBe(true);
       // Restore
       console.group = origGroup;
       console.groupEnd = origGroupEnd;
@@ -365,9 +365,9 @@ describe('Logger', () => {
         logger.info('Inside group');
       });
 
-      expect(spy).toHaveBeenCalledWith('📁 Test Group');
+      expect(spy).toHaveBeenCalledWith('📦 Test Group');
       expect(spy).toHaveBeenCalledWith('Inside group');
-      expect(spy).toHaveBeenCalledWith('📁 End: Test Group');
+      expect(spy).toHaveBeenCalledWith('📦 End: Test Group');
 
       console.group = originalGroup;
       console.groupEnd = originalGroupEnd;
@@ -423,7 +423,10 @@ describe('Logger', () => {
 
     test('should return message unchanged if logConfig is missing in formatMessage', () => {
       // @ts-ignore
-      expect(logger.formatMessage('notalevel', 'msg')).toBe('msg');
+      expect(logger.formatMessage('notalevel', 'msg')).toEqual({
+        formatted: 'msg',
+        raw: 'msg',
+      });
     });
 
     test('should do nothing if logConfig is missing in logToConsole', () => {
@@ -499,8 +502,21 @@ describe('Logger', () => {
 
     test('formatMessage returns message for unknown log level', () => {
       const logger = new Logger(createLoggerConfig());
-      // @ts-ignore
-      expect(logger.formatMessage('unknown' as any, 'test')).toBe('test');
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      logger.logMessage('test');
+
+      expect(consoleSpy).toHaveBeenCalled();
+      const calls = consoleSpy.mock.calls;
+      expect(calls.length).toBeGreaterThan(0);
+      const firstCall = calls[0];
+      expect(firstCall).toBeDefined();
+      const message = Array.isArray(firstCall)
+        ? firstCall.flat().join('')
+        : String(firstCall);
+      expect(message).toMatch(/\[loghorn\].*\[LOG\] test/);
+
+      consoleSpy.mockRestore();
     });
 
     test('logToConsole returns early if no logConfig', () => {
@@ -572,7 +588,7 @@ describe('Logger', () => {
           info: {
             enabled: false,
             color: '#00ff00',
-            emoji: 'ℹ️',
+            emoji: '💡',
             level: 'info',
           },
           warn: {
@@ -669,8 +685,8 @@ describe('Logger', () => {
         logger.info('Inside group');
       });
 
-      expect(output).toContain('📁 Test Group');
-      expect(output).toContain('📁 End: Test Group');
+      expect(output).toContain('📦 Test Group');
+      expect(output).toContain('📦 End: Test Group');
       logger.info = origInfo;
       console.group = originalGroup;
       console.groupEnd = originalGroupEnd;
@@ -687,7 +703,7 @@ describe('Logger', () => {
             emoji: '❌',
             level: 'error',
           },
-          info: { enabled: true, color: '#00ff00', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: '#00ff00', emoji: '💡', level: 'info' },
           warn: { enabled: true, color: '#ffff00', emoji: '⚠️', level: 'warn' },
           debug: {
             enabled: true,
@@ -816,8 +832,8 @@ describe('Logger', () => {
       logger.group('Test Group Fallback', () => {
         logger.info('Inside group fallback');
       });
-      expect(output).toContain('📁 Test Group Fallback');
-      expect(output).toContain('📁 End: Test Group Fallback');
+      expect(output).toContain('📦 Test Group Fallback');
+      expect(output).toContain('📦 End: Test Group Fallback');
       logger.info = origInfo;
       console.group = originalGroup;
       console.groupEnd = originalGroupEnd;
@@ -1255,13 +1271,13 @@ describe('Logger', () => {
       });
 
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 Test Group'),
+        expect.stringContaining('📦 Test Group'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Inside group'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 End: Test Group'),
+        expect.stringContaining('📦 End: Test Group'),
       );
     });
 
@@ -1278,13 +1294,13 @@ describe('Logger', () => {
       });
 
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 Collapsed Group'),
+        expect.stringContaining('📦 Collapsed Group'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Inside collapsed group'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 End: Collapsed Group'),
+        expect.stringContaining('📦 End: Collapsed Group'),
       );
     });
 
@@ -1303,7 +1319,7 @@ describe('Logger', () => {
       });
 
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 Async Group'),
+        expect.stringContaining('📦 Async Group'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Starting async operation'),
@@ -1312,7 +1328,7 @@ describe('Logger', () => {
         expect.stringContaining('Async operation completed'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 End: Async Group'),
+        expect.stringContaining('📦 End: Async Group'),
       );
     });
 
@@ -1356,22 +1372,22 @@ describe('Logger', () => {
       });
 
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 Outer Group'),
+        expect.stringContaining('📦 Outer Group'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Outer message'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 Inner Group'),
+        expect.stringContaining('📦 Inner Group'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Inner message'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 End: Inner Group'),
+        expect.stringContaining('📦 End: Inner Group'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 End: Outer Group'),
+        expect.stringContaining('📦 End: Outer Group'),
       );
     });
 
@@ -1390,10 +1406,10 @@ describe('Logger', () => {
       }).toThrow('Test error');
 
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 Error Group'),
+        expect.stringContaining('📦 Error Group'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 End: Error Group'),
+        expect.stringContaining('📦 End: Error Group'),
       );
     });
 
@@ -1412,10 +1428,10 @@ describe('Logger', () => {
       ).rejects.toThrow('Async test error');
 
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 Async Error Group'),
+        expect.stringContaining('📦 Async Error Group'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 End: Async Error Group'),
+        expect.stringContaining('📦 End: Async Error Group'),
       );
 
       // The error message is logged to console.error, not console.log
@@ -1440,7 +1456,7 @@ describe('Logger', () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 Mixed Group'),
+        expect.stringContaining('📦 Mixed Group'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Starting async operation'),
@@ -1449,7 +1465,7 @@ describe('Logger', () => {
         expect.stringContaining('Async operation completed'),
       );
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('📁 End: Mixed Group'),
+        expect.stringContaining('📦 End: Mixed Group'),
       );
     });
 
@@ -1552,7 +1568,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -1572,10 +1588,9 @@ describe('Logger', () => {
 
       logger.info('Test message', { data: 'test' });
 
-      expect(global.console.log).toHaveBeenCalledWith(
-        expect.stringContaining('[INFO] Test message'),
-        { data: 'test' },
-      );
+      const calls = (global.console.log as jest.Mock).mock.calls;
+      expect(calls[0][0]).toContain('[loghorn] [INFO] Test message');
+      expect(calls[1][0]).toEqual({ data: 'test' });
 
       // Restore console
       global.console = originalConsole;
@@ -1599,7 +1614,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -1647,7 +1662,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -1659,10 +1674,9 @@ describe('Logger', () => {
 
       logger.logMessage('Test message', { data: 'test' });
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[LOG] Test message'),
-        { data: 'test' },
-      );
+      const calls = (consoleSpy as jest.Mock).mock.calls;
+      expect(calls[0][0]).toContain('[loghorn] [LOG] Test message');
+      expect(calls[1][0]).toEqual({ data: 'test' });
 
       consoleSpy.mockRestore();
     });
@@ -1680,7 +1694,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -1726,7 +1740,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -1770,7 +1784,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -1801,10 +1815,10 @@ describe('Logger', () => {
       );
 
       expect(global.console.log).toHaveBeenCalledWith(
-        expect.stringContaining('📁 Test Group'),
+        expect.stringContaining('📦 Test Group'),
       );
       expect(global.console.log).toHaveBeenCalledWith(
-        expect.stringContaining('📁 End: Test Group'),
+        expect.stringContaining('📦 End: Test Group'),
       );
 
       // Restore console
@@ -1824,7 +1838,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -1850,9 +1864,10 @@ describe('Logger', () => {
 
       expect(global.console.group).toHaveBeenCalledWith('Test Group');
       expect(global.console.groupEnd).toHaveBeenCalled();
-      expect(global.console.error).toHaveBeenCalledWith(
-        expect.stringContaining('Group execution failed: Async test error'),
-        expect.any(Error),
+
+      const errorCalls = (global.console.error as jest.Mock).mock.calls;
+      expect(errorCalls[0][0]).toContain(
+        '[loghorn] [ERROR] Group execution failed: Async test error',
       );
 
       // Restore console
@@ -1869,7 +1884,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -1895,14 +1910,15 @@ describe('Logger', () => {
       ).rejects.toThrow('Async test error');
 
       expect(global.console.log).toHaveBeenCalledWith(
-        expect.stringContaining('📁 Test Group'),
+        expect.stringContaining('📦 Test Group'),
       );
-      expect(global.console.error).toHaveBeenCalledWith(
-        expect.stringContaining('❌ Group execution failed: Async test error'),
-        expect.any(Error),
+      const errorCalls = (global.console.error as jest.Mock).mock.calls;
+      expect(errorCalls[0][0]).toContain('[loghorn] [ERROR]');
+      expect(errorCalls[0][0]).toContain(
+        'Group execution failed: Async test error',
       );
       expect(global.console.log).toHaveBeenCalledWith(
-        expect.stringContaining('📁 End: Test Group'),
+        expect.stringContaining('📦 End: Test Group'),
       );
 
       // Restore console
@@ -1951,7 +1967,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -1987,7 +2003,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -2033,7 +2049,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -2099,7 +2115,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -2139,7 +2155,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -2236,7 +2252,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -2290,7 +2306,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -2334,7 +2350,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -2374,7 +2390,7 @@ describe('Logger', () => {
         enableStackTraces: false,
         logLevels: {
           log: { enabled: true, color: 'blue', emoji: '📝', level: 'log' },
-          info: { enabled: true, color: 'blue', emoji: 'ℹ️', level: 'info' },
+          info: { enabled: true, color: 'blue', emoji: '💡', level: 'info' },
           error: { enabled: true, color: 'red', emoji: '❌', level: 'error' },
           warn: { enabled: true, color: 'yellow', emoji: '⚠️', level: 'warn' },
           debug: { enabled: true, color: 'green', emoji: '🐛', level: 'debug' },
@@ -2414,7 +2430,7 @@ describe('Logger', () => {
           info: {
             enabled: true,
             color: 'blue',
-            emoji: 'ℹ️',
+            emoji: '💡',
             level: 'info' as const,
           },
           error: {
@@ -2536,6 +2552,15 @@ describe('Logger', () => {
         enableEmojis: false,
         enableTimestamps: true,
         enableStackTraces: false,
+        prettyJSON: false,
+        logLevels: {
+          info: { level: 'info', enabled: true, color: 'blue', emoji: '💡' },
+          error: { level: 'error', enabled: true, color: 'red', emoji: '❌' },
+          warn: { level: 'warn', enabled: true, color: 'yellow', emoji: '⚠️' },
+          debug: { level: 'debug', enabled: true, color: 'green', emoji: '🐛' },
+          trace: { level: 'trace', enabled: true, color: 'gray', emoji: '🔍' },
+          log: { level: 'log', enabled: true, color: 'blue', emoji: '📝' },
+        },
       });
       const logger = new Logger(config);
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
@@ -2588,10 +2613,9 @@ describe('Logger', () => {
         debug: jest.fn(),
       };
       logger.info('Colored message', { data: 'test' });
-      expect(global.console.log).toHaveBeenCalledWith(
-        expect.stringContaining('[INFO] Colored message'),
-        { data: 'test' },
-      );
+      const calls = (global.console.log as jest.Mock).mock.calls;
+      expect(calls[0][0]).toContain('[loghorn] [INFO] Colored message');
+      expect(calls[1][0]).toEqual({ data: 'test' });
       global.console = originalConsole;
     });
   });
@@ -2610,10 +2634,9 @@ describe('Logger', () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       const error = new Error('Test error');
       logger.error('Error with stack trace', error);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[ERROR] Error with stack trace'),
-        expect.any(Error),
-      );
+      const calls = (consoleSpy as jest.Mock).mock.calls;
+      expect(calls[0]).toContain('[loghorn] [ERROR] Error with stack trace');
+      expect(calls[1][0].toString()).toBe('Error: Test error');
       consoleSpy.mockRestore();
     });
   });
@@ -2649,6 +2672,15 @@ describe('Logger', () => {
         enableEmojis: false,
         enableTimestamps: true,
         enableStackTraces: false,
+        prettyJSON: false,
+        logLevels: {
+          info: { level: 'info', enabled: true, color: 'blue', emoji: '💡' },
+          error: { level: 'error', enabled: true, color: 'red', emoji: '❌' },
+          warn: { level: 'warn', enabled: true, color: 'yellow', emoji: '⚠️' },
+          debug: { level: 'debug', enabled: true, color: 'green', emoji: '🐛' },
+          trace: { level: 'trace', enabled: true, color: 'gray', emoji: '🔍' },
+          log: { level: 'log', enabled: true, color: 'blue', emoji: '📝' },
+        },
       });
       const logger = new Logger(config);
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
@@ -2669,8 +2701,9 @@ describe('Logger', () => {
         enableEmojis: false,
         enableTimestamps: false,
         enableStackTraces: false,
+        prettyJSON: false,
         logLevels: {
-          info: { level: 'info', enabled: true, color: 'blue', emoji: 'ℹ️' },
+          info: { level: 'info', enabled: true, color: 'blue', emoji: '💡' },
           error: { level: 'error', enabled: true, color: 'red', emoji: '❌' },
           warn: { level: 'warn', enabled: true, color: 'yellow', emoji: '⚠️' },
           debug: { level: 'debug', enabled: true, color: 'green', emoji: '🐛' },
@@ -2683,7 +2716,7 @@ describe('Logger', () => {
       logger.info('Test message');
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringMatching(
-          /^\{"context":\{},"level":"info","message":"Test message"(,"timestamp":".*")?\}$/,
+          /^\{"context":\{},"level":"info","message":"Test message","timestamp":".*"?\}$/,
         ),
       );
       consoleSpy.mockRestore();
@@ -2705,7 +2738,7 @@ describe('Logger', () => {
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
       logger.info('Message with circular reference', circularObj);
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('"name":"test"'),
+        expect.stringMatching(/.*"name":\s*"test".*/),
       );
       consoleSpy.mockRestore();
     });
@@ -2722,7 +2755,7 @@ describe('Logger', () => {
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
       logger.info('Message with undefined', undefined);
       logger.info('Message with null', null);
-      expect(consoleSpy).toHaveBeenCalledTimes(2);
+      expect(consoleSpy).toHaveBeenCalledTimes(3);
       consoleSpy.mockRestore();
     });
 

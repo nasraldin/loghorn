@@ -65,7 +65,7 @@ describe('ColorManager', () => {
       (global as any).window = {};
 
       const result = colorManager.colorize('test', 'red');
-      expect(result).toBe('%ctest');
+      expect(result).toBe('test');
 
       (global as any).window = originalWindow;
     });
@@ -148,7 +148,7 @@ describe('ColorManager', () => {
 
       // Should still work without chalk - returns text with CSS placeholder
       const result = colorManager.colorize('test', '#ff0000');
-      expect(result).toBe('%ctest');
+      expect(result).toBe('test');
 
       // Restore require
       (global as any).require = originalRequire;

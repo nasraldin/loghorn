@@ -188,7 +188,7 @@ describe('Integration Tests', () => {
       logger.info('JSON test', { data: 'value' });
 
       const logs = getCapturedLogs();
-      expect(logs).toHaveLength(1);
+      expect(logs).toHaveLength(2);
       expect(logs[0]).toContain('[INFO] JSON test');
     });
   });

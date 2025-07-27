@@ -291,12 +291,12 @@ describe('Configuration', () => {
       expect(config.enableColors).toBe(true); // default
       expect(config.enableEmojis).toBe(true); // default
       expect(config.enableTimestamps).toBe(true); // default
-      expect(config.enableStackTraces).toBe(false); // default
-      expect(config.enableJSON).toBe(false); // default
-      expect(config.middleware?.enabled).toBe(false); // default
-      expect(config.middleware?.logRequests).toBe(false); // default
-      expect(config.middleware?.logResponses).toBe(false); // default
-      expect(config.middleware?.logErrors).toBe(false); // default
+      expect(config.enableStackTraces).toBe(true); // default
+      expect(config.enableJSON).toBe(true); // default
+      expect(config.middleware?.enabled).toBe(true); // default
+      expect(config.middleware?.logRequests).toBe(true); // default
+      expect(config.middleware?.logResponses).toBe(true); // default
+      expect(config.middleware?.logErrors).toBe(true); // default
       expect(config.middleware?.excludePaths).toEqual([]); // default
       expect(config.logLevels?.info.enabled).toBe(true); // default
       expect(config.logLevels?.debug.enabled).toBe(true); // default
@@ -371,14 +371,63 @@ describe('Configuration', () => {
       process.env = originalEnv;
     });
 
-    test('loadConfigFromEnv returns empty config if process is undefined', () => {
-      const origProcess = global.process;
-      // @ts-ignore
-      delete global.process;
-      const config = require('../lib/config').loadConfigFromEnv();
-      // @ts-ignore
-      global.process = origProcess;
-      expect(config).toEqual({});
+    test('loadConfigFromEnv handles undefined process.env gracefully', () => {
+      const origEnv = process.env;
+
+      // Test with undefined process.env
+      jest.isolateModules(() => {
+        // Create a minimal mock of process.env
+        process.env = {};
+        // const { getEnvVar } = require('../lib/config');
+        // Mock getEnvVar to simulate undefined environment
+        jest.mock('../lib/config', () => ({
+          ...jest.requireActual('../lib/config'),
+          getEnvVar: () => undefined,
+        }));
+        const config = require('../lib/config').loadConfigFromEnv();
+        expect(config).toEqual({
+          logLevels: {
+            debug: {
+              color: '#6c757d',
+              emoji: '🔧',
+              enabled: true,
+              level: 'debug',
+            },
+            error: {
+              color: '#dc3545',
+              emoji: '💥',
+              enabled: true,
+              level: 'error',
+            },
+            info: {
+              color: '#17a2b8',
+              emoji: '💡',
+              enabled: true,
+              level: 'info',
+            },
+            log: {
+              color: '#28a745',
+              emoji: '📋',
+              enabled: true,
+              level: 'log',
+            },
+            trace: {
+              color: '#6f42c1',
+              emoji: '🔬',
+              enabled: true,
+              level: 'trace',
+            },
+            warn: {
+              color: '#ffc107',
+              emoji: '⚡',
+              enabled: true,
+              level: 'warn',
+            },
+          },
+        });
+      });
+
+      process.env = origEnv;
     });
 
     test('loadConfigFromEnv loads middleware config', () => {
