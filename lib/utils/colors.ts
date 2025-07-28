@@ -4,9 +4,9 @@ export interface ColorOptions {
 }
 
 export class ColorManager {
-  private enableColors: boolean;
-  private customColors: Record<string, string>;
-  private chalk: any;
+  private readonly enableColors: boolean;
+  private readonly customColors: Record<string, string>;
+  private readonly chalk: any;
 
   constructor(options: ColorOptions) {
     this.enableColors = options.enableColors;

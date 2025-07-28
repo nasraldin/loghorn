@@ -65,13 +65,6 @@ export const ENVIRONMENT_CONFIGS: Record<Environment, Partial<LoggerConfig>> = {
       debug: { ...DEFAULT_LOG_LEVELS.debug, enabled: true },
       trace: { ...DEFAULT_LOG_LEVELS.trace, enabled: true },
     },
-    middleware: {
-      enabled: true,
-      logRequests: true,
-      logResponses: true,
-      logErrors: true,
-      excludePaths: ['/health', '/metrics'],
-    },
   },
   production: {
     enableColors: false,
@@ -90,13 +83,6 @@ export const ENVIRONMENT_CONFIGS: Record<Environment, Partial<LoggerConfig>> = {
       debug: { ...DEFAULT_LOG_LEVELS.debug, enabled: false },
       trace: { ...DEFAULT_LOG_LEVELS.trace, enabled: false },
     },
-    middleware: {
-      enabled: true,
-      logRequests: false,
-      logResponses: false,
-      logErrors: true,
-      excludePaths: ['/health', '/metrics', '/favicon.ico'],
-    },
   },
   test: {
     enableColors: false,
@@ -111,12 +97,6 @@ export const ENVIRONMENT_CONFIGS: Record<Environment, Partial<LoggerConfig>> = {
       warn: { ...DEFAULT_LOG_LEVELS.warn, enabled: false },
       trace: { ...DEFAULT_LOG_LEVELS.trace, enabled: false },
     },
-    middleware: {
-      enabled: false,
-      logRequests: false,
-      logResponses: false,
-      logErrors: false,
-    },
   },
   staging: {
     enableColors: true,
@@ -128,13 +108,6 @@ export const ENVIRONMENT_CONFIGS: Record<Environment, Partial<LoggerConfig>> = {
       ...DEFAULT_LOG_LEVELS,
       debug: { ...DEFAULT_LOG_LEVELS.debug, enabled: true },
       trace: { ...DEFAULT_LOG_LEVELS.trace, enabled: false },
-    },
-    middleware: {
-      enabled: true,
-      logRequests: true,
-      logResponses: true,
-      logErrors: true,
-      excludePaths: ['/health', '/metrics'],
     },
   },
 };
@@ -216,14 +189,6 @@ export function createLoggerConfig(
     ...(overrides.projectName !== undefined || baseConfig.projectName !== undefined
       ? { projectName: overrides.projectName ?? baseConfig.projectName }
       : {}),
-    middleware: {
-      enabled: baseConfig.middleware?.enabled ?? true, // Enable by default
-      logRequests: baseConfig.middleware?.logRequests ?? true, // Enable by default
-      logResponses: baseConfig.middleware?.logResponses ?? true, // Enable by default
-      logErrors: baseConfig.middleware?.logErrors ?? true, // Enable by default
-      excludePaths: baseConfig.middleware?.excludePaths ?? [],
-      ...overrides.middleware,
-    },
   };
 
   // Handle optional properties
@@ -237,125 +202,83 @@ export function createLoggerConfig(
   return config;
 }
 
-export function loadConfigFromEnv(): Partial<LoggerConfig> {
-  const config: Partial<LoggerConfig> = {};
+// Helper function to get environment variables with framework prefixes
+function getEnvVar(key: string): string | undefined {
+  // Check if we're in a browser environment with access to process.env
+  if (typeof process !== 'undefined' && process.env) {
+    return (
+      process.env[key] ||
+      process.env[`NEXT_PUBLIC_${key}`] ||
+      process.env[`VITE_${key}`] ||
+      process.env[`REACT_APP_${key}`] ||
+      process.env[`NUXT_${key}`] ||
+      process.env[`SVELTE_${key}`]
+    );
+  }
 
-  // Helper function to get environment variables with framework prefixes
-  const getEnvVar = (key: string): string | undefined => {
-    // Check if we're in a browser environment with access to process.env
-    if (typeof process !== 'undefined' && process.env) {
-      return (
-        process.env[key] ||
-        process.env[`NEXT_PUBLIC_${key}`] ||
-        process.env[`VITE_${key}`] ||
-        process.env[`REACT_APP_${key}`] ||
-        process.env[`NUXT_${key}`] ||
-        process.env[`SVELTE_${key}`]
-      );
-    }
+  // For browser environments, try to access window.__ENV__ or similar
+  if (typeof globalThis !== 'undefined' && 'window' in globalThis) {
+    const windowAny = globalThis as any;
+    return (
+      windowAny.__ENV__?.[key] ||
+      windowAny.__ENV__?.[`NEXT_PUBLIC_${key}`] ||
+      windowAny.__ENV__?.[`VITE_${key}`] ||
+      windowAny.__ENV__?.[`REACT_APP_${key}`] ||
+      windowAny.__ENV__?.[`NUXT_${key}`] ||
+      windowAny.__ENV__?.[`SVELTE_${key}`]
+    );
+  }
 
-    // For browser environments, try to access window.__ENV__ or similar
-    if (typeof globalThis !== 'undefined' && 'window' in globalThis) {
-      const windowAny = globalThis as any;
-      return (
-        windowAny.__ENV__?.[key] ||
-        windowAny.__ENV__?.[`NEXT_PUBLIC_${key}`] ||
-        windowAny.__ENV__?.[`VITE_${key}`] ||
-        windowAny.__ENV__?.[`REACT_APP_${key}`] ||
-        windowAny.__ENV__?.[`NUXT_${key}`] ||
-        windowAny.__ENV__?.[`SVELTE_${key}`]
-      );
-    }
+  return undefined;
+}
 
-    return undefined;
-  };
-
-  // Early return if no environment access
+// Helper function to check if any environment variables are available
+function hasAnyEnvironmentVariables(): boolean {
   if (
     typeof process === 'undefined' &&
     typeof globalThis !== 'undefined' &&
     'window' in globalThis
   ) {
-    // Try to load from browser environment
-    const hasAnyEnvVar = [
+    const envVarKeys = [
       'LOGHORN_SHOW_HEADER',
       'LOGHORN_ENABLE_COLORS',
       'LOGHORN_ENVIRONMENT',
       'NEXT_PUBLIC_LOGHORN_SHOW_HEADER',
       'VITE_LOGHORN_SHOW_HEADER',
       'REACT_APP_LOGHORN_SHOW_HEADER',
-    ].some((key) => getEnvVar(key) !== undefined);
-
-    if (!hasAnyEnvVar) {
-      return config;
-    }
+    ];
+    return envVarKeys.some((key) => getEnvVar(key) !== undefined);
   }
+  return true;
+}
 
-  // Environment
-  if (getEnvVar('LOGHORN_ENVIRONMENT')) {
-    config.environment = getEnvVar('LOGHORN_ENVIRONMENT') as Environment;
+// Helper function to set boolean config from environment variable
+function setBooleanConfig(
+  config: Partial<LoggerConfig>,
+  envKey: string,
+  configKey: keyof LoggerConfig,
+): void {
+  const value = getEnvVar(envKey);
+  if (value !== undefined) {
+    (config as any)[configKey] = value === 'true';
   }
+}
 
-  // Project name - support multiple framework prefixes
-  const projectName =
+// Helper function to load project name from various sources
+function loadProjectName(): string | undefined {
+  return (
     getEnvVar('LOGHORN_PROJECT_NAME') ||
     process.env['PROJECT_NAME'] ||
     process.env['APP_NAME'] ||
     process.env['NEXT_PUBLIC_APP_NAME'] ||
     process.env['VITE_APP_NAME'] ||
     process.env['REACT_APP_NAME'] ||
-    process.env['npm_package_name'];
+    process.env['npm_package_name']
+  );
+}
 
-  if (projectName) {
-    config.projectName = projectName;
-  }
-
-  // Features
-  if (getEnvVar('LOGHORN_ENABLE_COLORS') !== undefined) {
-    config.enableColors = getEnvVar('LOGHORN_ENABLE_COLORS') === 'true';
-  }
-
-  if (getEnvVar('LOGHORN_ENABLE_EMOJIS') !== undefined) {
-    config.enableEmojis = getEnvVar('LOGHORN_ENABLE_EMOJIS') === 'true';
-  }
-
-  if (getEnvVar('LOGHORN_ENABLE_TIMESTAMPS') !== undefined) {
-    config.enableTimestamps = getEnvVar('LOGHORN_ENABLE_TIMESTAMPS') === 'true';
-  }
-
-  if (getEnvVar('LOGHORN_ENABLE_STACK_TRACES') !== undefined) {
-    config.enableStackTraces = getEnvVar('LOGHORN_ENABLE_STACK_TRACES') === 'true';
-  }
-
-  if (getEnvVar('LOGHORN_ENABLE_JSON') !== undefined) {
-    config.enableJSON = getEnvVar('LOGHORN_ENABLE_JSON') === 'true';
-  }
-
-  if (getEnvVar('LOGHORN_ENABLE_TABLE') !== undefined) {
-    config.enableTable = getEnvVar('LOGHORN_ENABLE_TABLE') === 'true';
-  }
-
-  if (getEnvVar('LOGHORN_SHOW_EMOJI') !== undefined) {
-    config.showEmoji = getEnvVar('LOGHORN_SHOW_EMOJI') === 'true';
-  }
-
-  if (getEnvVar('LOGHORN_SHOW_TIMESTAMP') !== undefined) {
-    config.showTimestamp = getEnvVar('LOGHORN_SHOW_TIMESTAMP') === 'true';
-  }
-
-  if (getEnvVar('LOGHORN_SHOW_LEVEL') !== undefined) {
-    config.showLevel = getEnvVar('LOGHORN_SHOW_LEVEL') === 'true';
-  }
-
-  if (getEnvVar('LOGHORN_SHOW_PROJECT_NAME') !== undefined) {
-    config.showProjectName = getEnvVar('LOGHORN_SHOW_PROJECT_NAME') === 'true';
-  }
-
-  if (getEnvVar('LOGHORN_SHOW_HEADER') !== undefined) {
-    config.showHeader = getEnvVar('LOGHORN_SHOW_HEADER') === 'true';
-  }
-
-  // Log levels
+// Helper function to load log levels configuration
+function loadLogLevels(): Record<LogLevel, LogConfig> {
   const logLevels: Record<LogLevel, LogConfig> = { ...DEFAULT_LOG_LEVELS };
 
   Object.keys(DEFAULT_LOG_LEVELS).forEach((level) => {
@@ -368,21 +291,44 @@ export function loadConfigFromEnv(): Partial<LoggerConfig> {
     }
   });
 
-  config.logLevels = logLevels;
+  return logLevels;
+}
 
-  // Middleware
-  if (process.env['LOGHORN_MIDDLEWARE_ENABLED']) {
-    config.middleware = {
-      enabled: process.env['LOGHORN_MIDDLEWARE_ENABLED'] === 'true',
-      logRequests: process.env['LOGHORN_MIDDLEWARE_LOG_REQUESTS'] === 'true',
-      logResponses: process.env['LOGHORN_MIDDLEWARE_LOG_RESPONSES'] === 'true',
-      logErrors: process.env['LOGHORN_MIDDLEWARE_LOG_ERRORS'] === 'true',
-      excludePaths:
-        process.env['LOGHORN_MIDDLEWARE_EXCLUDE_PATHS']
-          ?.split(',')
-          .map((p) => p.trim()) || [],
-    };
+export function loadConfigFromEnv(): Partial<LoggerConfig> {
+  const config: Partial<LoggerConfig> = {};
+
+  // Early return if no environment access
+  if (!hasAnyEnvironmentVariables()) {
+    return config;
   }
+
+  // Environment
+  const environment = getEnvVar('LOGHORN_ENVIRONMENT');
+  if (environment) {
+    config.environment = environment as Environment;
+  }
+
+  // Project name
+  const projectName = loadProjectName();
+  if (projectName) {
+    config.projectName = projectName;
+  }
+
+  // Features
+  setBooleanConfig(config, 'LOGHORN_ENABLE_COLORS', 'enableColors');
+  setBooleanConfig(config, 'LOGHORN_ENABLE_EMOJIS', 'enableEmojis');
+  setBooleanConfig(config, 'LOGHORN_ENABLE_TIMESTAMPS', 'enableTimestamps');
+  setBooleanConfig(config, 'LOGHORN_ENABLE_STACK_TRACES', 'enableStackTraces');
+  setBooleanConfig(config, 'LOGHORN_ENABLE_JSON', 'enableJSON');
+  setBooleanConfig(config, 'LOGHORN_ENABLE_TABLE', 'enableTable');
+  setBooleanConfig(config, 'LOGHORN_SHOW_EMOJI', 'showEmoji');
+  setBooleanConfig(config, 'LOGHORN_SHOW_TIMESTAMP', 'showTimestamp');
+  setBooleanConfig(config, 'LOGHORN_SHOW_LEVEL', 'showLevel');
+  setBooleanConfig(config, 'LOGHORN_SHOW_PROJECT_NAME', 'showProjectName');
+  setBooleanConfig(config, 'LOGHORN_SHOW_HEADER', 'showHeader');
+
+  // Log levels
+  config.logLevels = loadLogLevels();
 
   return config;
 }

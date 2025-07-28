@@ -1,9 +1,31 @@
+import { createLoggerConfig, loadConfigFromEnv } from './config';
+import { EdgeLogger } from './core/edge-logger';
 import { Logger } from './core/logger';
+import { OptimizedLogger } from './core/optimized-logger';
+import {
+  PerformanceLogger,
+  type PerformanceLoggerConfig,
+} from './core/performance-logger';
 import { NextJSLogger } from './frameworks/nextjs';
 import type { NextJSLoggerConfig, PartialLoggerConfig } from './types';
 
 // Core exports
 export { Logger } from './core/logger';
+export { OptimizedLogger } from './core/optimized-logger';
+export { EdgeLogger } from './core/edge-logger';
+export { AsyncLogger } from './core/async-logger';
+export { LogEntryPool } from './core/object-pool';
+export { RateLimiter } from './core/rate-limiter';
+
+// Performance monitoring exports
+export { PerformanceLogger } from './core/performance-logger';
+export { PerformanceMonitor } from './core/performance-monitor';
+export type { PerformanceLoggerConfig } from './core/performance-logger';
+export type {
+  PerformanceConfig,
+  PerformanceMetric,
+  PerformanceStats,
+} from './core/performance-monitor';
 
 // Framework-specific loggers
 export { NextJSLogger } from './frameworks/nextjs';
@@ -27,7 +49,6 @@ export type {
   PartialLoggerConfig,
   LogEntry,
   LogContext,
-  MiddlewareOptions,
   NextJSLoggerConfig,
   GroupOptions,
   AsyncGroupOptions,
@@ -35,18 +56,19 @@ export type {
 
 // Utility exports
 export { ColorManager } from './utils/colors';
+export { EdgeColorManager } from './utils/edge-colors';
 
-// Middleware exports (Node.js only)
-export {
-  createLoggingMiddleware,
-  createMorganMiddleware,
-} from './middleware/express';
-export { fastifyLoghorn } from './middleware/fastify';
+// Helper function to detect Edge Runtime
+function isEdgeRuntime(): boolean {
+  return (
+    typeof globalThis !== 'undefined' &&
+    'EdgeRuntime' in globalThis &&
+    typeof (globalThis as any).EdgeRuntime === 'string'
+  );
+}
 
 // Factory function for easy setup
 export function createLogger(config?: PartialLoggerConfig): Logger {
-  const { createLoggerConfig, loadConfigFromEnv } = require('./config');
-
   // Load environment configuration
   const envConfig = loadConfigFromEnv();
 
@@ -56,6 +78,16 @@ export function createLogger(config?: PartialLoggerConfig): Logger {
     ...config,
   });
 
+  // Use Edge Logger for Edge Runtime
+  if (isEdgeRuntime()) {
+    return new EdgeLogger(finalConfig);
+  }
+
+  // Use optimized logger for production
+  if (finalConfig.environment === 'production') {
+    return new OptimizedLogger(finalConfig);
+  }
+
   return new Logger(finalConfig);
 }
 
@@ -63,8 +95,6 @@ export function createLogger(config?: PartialLoggerConfig): Logger {
 export function createNextJSLogger(
   config?: Partial<NextJSLoggerConfig>,
 ): NextJSLogger {
-  const { createLoggerConfig, loadConfigFromEnv } = require('./config');
-
   // Load environment configuration
   const envConfig = loadConfigFromEnv();
 
@@ -77,13 +107,27 @@ export function createNextJSLogger(
   return new NextJSLogger(finalConfig);
 }
 
+// Performance monitoring factory function
+export function createPerformanceLogger(
+  config?: Partial<PerformanceLoggerConfig>,
+): PerformanceLogger {
+  // Load environment configuration
+  const envConfig = loadConfigFromEnv();
+
+  // Merge configurations
+  const finalConfig = createLoggerConfig({
+    ...envConfig,
+    ...config,
+  }) as PerformanceLoggerConfig;
+
+  return new PerformanceLogger(finalConfig);
+}
+
 // Default logger instance - lazy initialization
 let defaultLogger: Logger | null = null;
 
 function getDefaultLogger(): Logger {
-  if (!defaultLogger) {
-    defaultLogger = createLogger();
-  }
+  defaultLogger ??= createLogger();
   return defaultLogger;
 }
 
@@ -127,3 +171,15 @@ export const logger = new Proxy({} as Logger, {
     return getDefaultLogger()[prop as keyof Logger];
   },
 });
+
+// Cleanup function for tests
+export async function cleanupDefaultLogger(): Promise<void> {
+  if (
+    defaultLogger &&
+    'destroy' in defaultLogger &&
+    typeof (defaultLogger as any).destroy === 'function'
+  ) {
+    await (defaultLogger as any).destroy();
+    defaultLogger = null;
+  }
+}

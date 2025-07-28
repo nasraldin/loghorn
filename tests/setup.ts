@@ -1,3 +1,5 @@
+import { cleanupDefaultLogger } from '../lib';
+
 // Mock console methods to capture output
 const originalConsole = {
   log: console.log,
@@ -60,7 +62,10 @@ beforeEach(() => {
   console.timeEnd = jest.fn();
 });
 
-afterEach(() => {
+afterEach(async () => {
+  // Cleanup default logger to prevent timer leaks
+  await cleanupDefaultLogger();
+
   // Restore original console methods
   console.log = originalConsole.log;
   console.info = originalConsole.info;
@@ -101,4 +106,11 @@ export function clearCapturedLogs(): void {
   global.capturedWarns = [];
   global.capturedInfos = [];
   global.capturedDebugs = [];
+}
+
+// Helper function to clean up logger instances
+export async function cleanupLogger(logger: any): Promise<void> {
+  if (logger && 'destroy' in logger && typeof logger.destroy === 'function') {
+    await logger.destroy();
+  }
 }

@@ -1,5 +1,3 @@
-import type { NextFunction, Request, Response } from 'express';
-
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'trace' | 'log';
 
 export type Environment = 'development' | 'production' | 'test' | 'staging';
@@ -39,13 +37,6 @@ export interface LoggerConfig {
   showLevel?: boolean;
   showProjectName?: boolean;
   showHeader?: boolean; // Master switch to show/hide entire header
-  middleware?: {
-    enabled: boolean;
-    logRequests: boolean;
-    logResponses: boolean;
-    logErrors: boolean;
-    excludePaths?: string[];
-  };
 }
 
 export interface PartialLoggerConfig extends Partial<LoggerConfig> {}
@@ -63,30 +54,6 @@ export interface LogContext extends Record<string, unknown> {
   // Additional context properties can be added here
 }
 
-export interface ExpressRequest extends Request {
-  loghorn?: {
-    requestId: string;
-    startTime: number;
-    context: LogContext;
-  };
-}
-
-export interface ExpressResponse extends Response {
-  loghorn?: {
-    requestId: string;
-    endTime: number;
-    statusCode: number;
-  };
-}
-
-export interface MiddlewareOptions {
-  logRequests?: boolean;
-  logResponses?: boolean;
-  logErrors?: boolean;
-  excludePaths?: string[];
-  customFormat?: (req: any, res: any, next?: any) => void;
-}
-
 // Framework-specific configurations
 export interface NextJSLoggerConfig extends LoggerConfig {
   enableSSRLogging?: boolean;
@@ -95,6 +62,14 @@ export interface NextJSLoggerConfig extends LoggerConfig {
   enableConsoleMethods?: boolean;
   enableGrouping?: boolean;
   maxGroupDepth?: number;
+  // Next.js 15 App Router specific options
+  enableAppRouterLogging?: boolean;
+  enableServerComponents?: boolean;
+  enableClientComponents?: boolean;
+  enableStreaming?: boolean;
+  enableSuspense?: boolean;
+  enableParallelRoutes?: boolean;
+  enableInterceptingRoutes?: boolean;
 }
 
 export interface GroupOptions {
@@ -105,6 +80,3 @@ export interface GroupOptions {
 export interface AsyncGroupOptions extends GroupOptions {
   // Additional options for async groups can be added here
 }
-
-// Re-export Express types for convenience
-export type { Request, Response, NextFunction };

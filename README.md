@@ -1,7 +1,7 @@
 # Loghorn 🦄
 
-A powerful, flexible, and production-ready logging library for Node.js and browsers
-with support for multiple frameworks and environments.
+A powerful, flexible, and production-ready logging library for Next.js with Edge
+Runtime support.
 
 [![npm version](https://badge.fury.io/js/loghorn.svg)](https://badge.fury.io/js/loghorn)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -9,8 +9,15 @@ with support for multiple frameworks and environments.
 
 ## ✨ Features
 
+- **Next.js Optimized**: Built specifically for Next.js applications
+- **Edge Runtime Compatible**: Works seamlessly with Next.js Edge Runtime
+- **Edge Runtime Color Handling**: Optimized color handling for Edge Runtime
+  environments
+- **Performance Monitoring**: Real-time performance metrics and health checks
+- **Memory Efficient**: Object pooling and automatic cleanup
+- **Rate Limiting**: Built-in protection against log spam and DoS attacks
+- **Asynchronous Logging**: Non-blocking batched operations
 - **Universal**: Works in Node.js and browsers
-- **Framework Support**: Express, Fastify, Next.js
 - **Environment Aware**: Automatic configuration based on environment
 - **Professional Output**: Elegant console output with colors and emojis
 - **Structured Logging**: JSON format for production environments
@@ -21,7 +28,6 @@ with support for multiple frameworks and environments.
 - **Context Management**: Add request IDs, user info, and custom context
 - **Performance Tracking**: Built-in timing and performance logging
 - **Error Handling**: Comprehensive error logging with stack traces
-- **Middleware**: Request/response logging for web frameworks
 
 ## 🚀 Quick Start
 
@@ -47,45 +53,38 @@ logger.warn('This is a warning');
 logger.error('Something went wrong', { error: 'details' });
 ```
 
-### Framework Integration
-
-#### Express.js
+### Performance Monitoring
 
 ```javascript
-import express from 'express';
-import { createLogger, createLoggingMiddleware } from 'loghorn';
+import { createPerformanceLogger } from 'loghorn';
 
-const app = express();
-const logger = createLogger();
+const logger = createPerformanceLogger({
+  enablePerformanceLogging: true,
+  performanceLogInterval: 30000, // Log stats every 30 seconds
+  performance: {
+    enableMemoryTracking: false, // Disabled for Edge Runtime
+    enableCpuTracking: false, // Disabled for Edge Runtime
+    autoCleanupInterval: 60000, // Cleanup every minute
+  },
+});
 
-// Basic middleware
-app.use(createLoggingMiddleware(logger));
+// Track performance automatically
+const metricId = logger.startPerformance('database-query', 'database');
+// ... perform operation
+logger.completePerformance(metricId);
 
-// Custom middleware configuration
-app.use(
-  createLoggingMiddleware(logger, {
-    logRequests: true,
-    logResponses: true,
-    logErrors: true,
-    excludePaths: ['/health', '/metrics'],
-  }),
+// Or use the convenient wrapper
+await logger.trackPerformance(
+  'api-request',
+  async () => {
+    const response = await fetch('/api/data');
+    return response.json();
+  },
+  'api',
 );
 ```
 
-#### Fastify
-
-```javascript
-import Fastify from 'fastify';
-import { createLogger, fastifyLoghorn } from 'loghorn';
-
-const fastify = Fastify();
-const logger = createLogger();
-
-// Register the plugin
-await fastify.register(fastifyLoghorn, { logger });
-```
-
-#### Next.js
+### Next.js Integration
 
 ```javascript
 import { createNextJSLogger } from 'loghorn';
@@ -95,6 +94,13 @@ const logger = createNextJSLogger({
   enableAPILogging: true,
   enablePageLogging: true,
 });
+
+// Next.js specific methods
+logger.ssr('Server-side rendering started');
+logger.api('API request received', { method: 'GET', path: '/api/users' });
+logger.page('Page component mounted');
+logger.route('Route change detected');
+logger.middleware('Middleware executed');
 ```
 
 ## 📚 API Reference
@@ -119,6 +125,143 @@ logger.success('Operation completed successfully');
 logger.failure('Operation failed');
 logger.start('Starting process');
 logger.end('Process completed');
+```
+
+#### Performance Monitoring Methods
+
+```javascript
+// Start and complete performance tracking
+const metricId = logger.startPerformance('operation-name', 'category');
+logger.completePerformance(metricId);
+
+// Track async operations
+await logger.trackPerformance(
+  'async-operation',
+  async () => {
+    // Your async operation here
+    return result;
+  },
+  'category',
+  { metadata: 'additional info' },
+);
+
+// Track sync operations
+const result = logger.trackPerformanceSync(
+  'sync-operation',
+  () => {
+    // Your sync operation here
+    return result;
+  },
+  'category',
+  { metadata: 'additional info' },
+);
+
+// Get performance statistics
+const stats = logger.getPerformanceStats();
+console.log('Total operations:', stats.totalOperations);
+console.log('Success rate:', stats.successRate);
+console.log('Average duration:', stats.averageDuration);
+
+// Log performance statistics
+logger.logPerformanceStats();
+logger.logDetailedMetrics(10); // Show last 10 metrics
+logger.logPerformanceHealth();
+
+// Get slow operations
+const slowOps = logger.getSlowOperations(1000); // Operations > 1 second
+console.log('Slow operations:', slowOps.length);
+
+// Get failed operations
+const failedOps = logger.getFailedOperations();
+console.log('Failed operations:', failedOps.length);
+
+// Check performance health
+const health = logger.checkPerformanceHealth();
+console.log('Healthy:', health.healthy);
+console.log('Warnings:', health.warnings);
+console.log('Critical issues:', health.critical);
+```
+
+#### Next.js Specific Methods
+
+```javascript
+logger.ssr('Server-side rendering message');
+logger.api('API route message');
+logger.page('Page component message');
+logger.route('Route change message');
+logger.middleware('Middleware message');
+logger.request(req, additionalData);
+logger.response(res, additionalData);
+logger.nextError(error, context);
+logger.performance('Operation', duration, data);
+logger.hydration('Hydration message');
+logger.staticGen('Static generation message');
+logger.imageOpt('Image optimization message');
+logger.cache('Cache operation message');
+logger.revalidate('Revalidation message');
+```
+
+#### Next.js 15 App Router Enhanced Methods
+
+```javascript
+// App Router Specific Methods
+logger.serverComponent('UserProfile', 'Component rendered', { userId: '123' });
+logger.clientComponent('UserForm', 'Component mounted', { formId: 'form-1' });
+logger.streaming('Stream started', { chunkSize: 1024 });
+logger.suspense('UserDataBoundary', 'Loading user data', { userId: '123' });
+logger.parallelRoute('@modal', 'Modal route loaded', { modalType: 'user' });
+logger.interceptingRoute('/users/[id]', 'Route intercepted', { userId: '123' });
+
+// App Router Lifecycle Methods
+logger.layout('RootLayout', 'Layout rendered', { pathname: '/dashboard' });
+logger.template('UserTemplate', 'Template rendered', { templateId: 'user' });
+logger.loading('UserLoading', 'Loading component rendered', {
+  loadingType: 'skeleton',
+});
+logger.errorBoundary('UserErrorBoundary', 'Error caught', { errorType: 'fetch' });
+logger.notFound('UserNotFound', 'User not found', { userId: '999' });
+
+// App Router Data Fetching
+logger.dataFetch('getUser', 'User data fetched', { userId: '123', cache: 'miss' });
+logger.metadata('generateMetadata', 'Metadata generated', { page: '/users' });
+
+// App Router Request/Response
+logger.cookies('set', 'Cookie set', { name: 'session', value: 'abc123' });
+logger.headers('set', 'Header set', { name: 'x-custom', value: 'value' });
+logger.redirect('/old-path', '/new-path', { reason: 'migration' });
+logger.searchParams({ page: '1', limit: '10' }, 'Search params processed', {
+  query: 'users',
+});
+logger.segment('users', 'Segment processed', { segmentType: 'dynamic' });
+```
+
+#### Edge Runtime Color Handling
+
+LogHorn automatically detects Edge Runtime environments and uses optimized color
+handling:
+
+```javascript
+import { EdgeColorManager } from 'loghorn';
+
+// Automatic Edge Runtime detection
+const edgeColorManager = new EdgeColorManager({
+  enableColors: true,
+  customColors: {
+    success: '#28a745',
+    warning: '#ffc107',
+    danger: '#dc3545',
+  },
+});
+
+// Optimized for Edge Runtime
+console.log(edgeColorManager.colorize('Success message', 'success'));
+console.log(edgeColorManager.colorize('Warning message', 'warning'));
+console.log(edgeColorManager.colorize('Error message', 'danger'));
+
+// Get color information
+const colorInfo = edgeColorManager.getColorInfo();
+console.log('Is Edge Runtime:', colorInfo.isEdgeRuntime);
+console.log('Supports Colors:', colorInfo.supportsColors);
 ```
 
 #### Context Management
@@ -223,7 +366,6 @@ LogHorn automatically configures itself based on your environment:
 - ✅ Elegant console output
 - ✅ Table logging enabled
 - ✅ Debug and trace logs enabled
-- ✅ Request/response logging
 
 #### Production
 
@@ -233,7 +375,6 @@ LogHorn automatically configures itself based on your environment:
 - ❌ Stack traces disabled
 - ✅ Structured JSON format
 - ❌ Debug and trace logs disabled
-- ❌ Request/response logging (errors only)
 
 #### Test
 
@@ -242,7 +383,53 @@ LogHorn automatically configures itself based on your environment:
 - ❌ Timestamps disabled
 - ❌ Stack traces disabled
 - ✅ JSON format
-- ❌ All middleware disabled
+
+### Performance Logger Configuration
+
+```javascript
+import { createPerformanceLogger } from 'loghorn';
+
+const logger = createPerformanceLogger({
+  // Standard logger configuration
+  environment: 'development',
+  enableColors: true,
+  enableEmojis: true,
+  enableTimestamps: true,
+  enableStackTraces: true,
+  enableJSON: false,
+  projectName: 'my-app',
+
+  // Performance monitoring configuration
+  enablePerformanceLogging: true,
+  enableAutoMetrics: true,
+  performanceLogInterval: 30000, // Log stats every 30 seconds
+
+  // Performance monitor configuration
+  performance: {
+    enableMemoryTracking: false, // Disabled for Edge Runtime compatibility
+    enableCpuTracking: false, // Disabled for Edge Runtime compatibility
+    enableThroughputTracking: true,
+    enableErrorTracking: true,
+    maxMetricsHistory: 1000,
+    autoCleanupInterval: 60000, // Cleanup every minute
+    performanceThresholds: {
+      slowOperationThreshold: 1000, // 1 second
+      errorRateThreshold: 5, // 5%
+      memoryThreshold: 100, // 100MB (Node.js only)
+    },
+  },
+
+  // Log levels
+  logLevels: {
+    debug: { level: 'debug', color: 'gray', emoji: '🐛', enabled: true },
+    info: { level: 'info', color: 'cyan', emoji: '💡', enabled: true },
+    warn: { level: 'warn', color: 'yellow', emoji: '⚠️', enabled: true },
+    error: { level: 'error', color: 'red', emoji: '❌', enabled: true },
+    trace: { level: 'trace', color: 'purple', emoji: '🔍', enabled: true },
+    log: { level: 'log', color: 'green', emoji: '📝', enabled: true },
+  },
+});
+```
 
 ### Custom Configuration
 
@@ -318,12 +505,14 @@ LOGHORN_SHOW_HEADER=true
 LOGHORN_DEBUG_ENABLED=false
 LOGHORN_TRACE_ENABLED=false
 
-# Middleware
-LOGHORN_MIDDLEWARE_ENABLED=true
-LOGHORN_MIDDLEWARE_LOG_REQUESTS=false
-LOGHORN_MIDDLEWARE_LOG_RESPONSES=false
-LOGHORN_MIDDLEWARE_LOG_ERRORS=true
-LOGHORN_MIDDLEWARE_EXCLUDE_PATHS=/health,/metrics
+# Performance Monitoring
+LOGHORN_ENABLE_PERFORMANCE_LOGGING=true
+LOGHORN_ENABLE_AUTO_METRICS=true
+LOGHORN_PERFORMANCE_LOG_INTERVAL=30000
+LOGHORN_MAX_METRICS_HISTORY=1000
+LOGHORN_AUTO_CLEANUP_INTERVAL=60000
+LOGHORN_SLOW_OPERATION_THRESHOLD=1000
+LOGHORN_ERROR_RATE_THRESHOLD=5
 ```
 
 ## 🎨 Output Formats
@@ -355,6 +544,27 @@ LOGHORN_MIDDLEWARE_EXCLUDE_PATHS=/health,/metrics
 }
 ```
 
+### Performance Monitoring Output
+
+```javascript
+// Performance statistics
+logger.logPerformanceStats();
+// Output:
+// 📊 Performance Statistics
+// Total Operations: 150
+// Average Duration: 45ms
+// Success Rate: 98.5%
+// Error Rate: 1.5%
+// Throughput: 2.5 ops/sec
+
+// Performance health check
+logger.logPerformanceHealth();
+// Output:
+// ✅ Performance Health: Healthy
+// ⚠️  Warnings: 2 slow operations detected
+// ❌ Critical: None
+```
+
 ### Browser Console Output
 
 Professional browser console output with colors and grouping:
@@ -366,6 +576,91 @@ logger.info('User action', { userId: '123', action: 'login' });
 ```
 
 ## 🔧 Advanced Usage
+
+### Performance Monitoring Examples
+
+#### Basic Performance Tracking
+
+```javascript
+import { createPerformanceLogger } from 'loghorn';
+
+const logger = createPerformanceLogger();
+
+// Manual tracking
+const metricId = logger.startPerformance('database-query', 'database');
+try {
+  const result = await db.query('SELECT * FROM users');
+  logger.completePerformance(metricId);
+  // return result;
+} catch (error) {
+  logger.completePerformance(metricId, error);
+  throw error;
+}
+```
+
+#### Automatic Performance Tracking
+
+```javascript
+// Track async operations
+const users = await logger.trackPerformance(
+  'fetch-users',
+  async () => {
+    const response = await fetch('/api/users');
+    return response.json();
+  },
+  'api',
+  { endpoint: '/api/users' },
+);
+
+// Track sync operations
+const processedData = logger.trackPerformanceSync(
+  'process-data',
+  () => {
+    return data.map((item) => ({ ...item, processed: true }));
+  },
+  'data-processing',
+  { items: data.length },
+);
+```
+
+#### Performance Monitoring in Groups
+
+```javascript
+logger.group('User Authentication', async () => {
+  // This group will be automatically tracked
+  logger.info('Starting authentication');
+
+  const user = await logger.trackPerformance(
+    'validate-credentials',
+    async () => {
+      return await validateUser(credentials);
+    },
+    'auth',
+  );
+
+  logger.success('Authentication completed', { userId: user.id });
+});
+```
+
+#### Performance Health Monitoring
+
+```javascript
+// Check performance health
+const health = logger.checkPerformanceHealth();
+if (!health.healthy) {
+  console.log('Performance issues detected:');
+  health.warnings.forEach((warning) => console.log('⚠️', warning));
+  health.critical.forEach((critical) => console.log('❌', critical));
+}
+
+// Get performance statistics
+const stats = logger.getPerformanceStats();
+console.log('Performance Summary:');
+console.log(`- Total Operations: ${stats.totalOperations}`);
+console.log(`- Success Rate: ${stats.successRate.toFixed(2)}%`);
+console.log(`- Average Duration: ${stats.averageDuration.toFixed(2)}ms`);
+console.log(`- Throughput: ${stats.throughput.toFixed(2)} ops/sec`);
+```
 
 ### Custom Color Management
 
@@ -415,15 +710,77 @@ logger.group('Performance Test', async () => {
 ### Request Context
 
 ```javascript
-// In Express middleware
-app.use((req, res, next) => {
-  logger.setContext({
-    requestId: req.headers['x-request-id'],
-    userId: req.user?.id,
-    sessionId: req.session?.id,
-  });
-  next();
+// In Next.js middleware or API routes
+logger.setContext({
+  requestId: req.headers['x-request-id'],
+  userId: req.user?.id,
+  sessionId: req.session?.id,
 });
+```
+
+### Next.js 15 App Router Enhanced Configuration
+
+The enhanced Next.js logger includes specific configuration options for App Router
+features:
+
+```javascript
+import { createNextJSLogger } from 'loghorn';
+
+const logger = createNextJSLogger({
+  // Standard configuration
+  environment: 'development',
+  enableColors: true,
+  enableEmojis: true,
+  enableTimestamps: true,
+  enableStackTraces: true,
+  enableJSON: false,
+  projectName: 'my-nextjs-app',
+
+  // App Router specific configuration
+  enableAppRouterLogging: true,
+  enableServerComponents: true,
+  enableClientComponents: true,
+  enableStreaming: true,
+  enableSuspense: true,
+  enableParallelRoutes: true,
+  enableInterceptingRoutes: true,
+
+  // Legacy Next.js features
+  enableSSRLogging: true,
+  enableAPILogging: true,
+  enablePageLogging: true,
+  enableConsoleMethods: true,
+  enableGrouping: true,
+  maxGroupDepth: 10,
+});
+```
+
+#### App Router Configuration Options
+
+| Option                     | Default | Description                            |
+| -------------------------- | ------- | -------------------------------------- |
+| `enableAppRouterLogging`   | `true`  | Enable all App Router specific logging |
+| `enableServerComponents`   | `true`  | Enable server component logging        |
+| `enableClientComponents`   | `true`  | Enable client component logging        |
+| `enableStreaming`          | `true`  | Enable streaming logging               |
+| `enableSuspense`           | `true`  | Enable suspense boundary logging       |
+| `enableParallelRoutes`     | `true`  | Enable parallel routes logging         |
+| `enableInterceptingRoutes` | `true`  | Enable intercepting routes logging     |
+
+#### Dynamic Configuration Updates
+
+```javascript
+// Update configuration at runtime
+logger.updateNextJSConfig({
+  enableServerComponents: false,
+  enableClientComponents: false,
+  enableStreaming: true,
+});
+
+// Get current configuration
+const config = logger.getNextJSConfig();
+console.log('Server Components:', config.enableServerComponents);
+console.log('Client Components:', config.enableClientComponents);
 ```
 
 ## 🌍 Environment Configurations
@@ -437,8 +794,7 @@ app.use((req, res, next) => {
 - ✅ Elegant console output
 - ✅ Table logging enabled
 - ✅ Debug and trace logs enabled
-- ✅ Request/response logging
-- ✅ All middleware enabled
+- ✅ Performance monitoring enabled
 
 ### Production
 
@@ -448,7 +804,7 @@ app.use((req, res, next) => {
 - ❌ Stack traces disabled
 - ✅ Structured JSON format
 - ❌ Debug and trace logs disabled
-- ❌ Request/response logging (errors only)
+- ✅ Performance monitoring enabled
 
 ### Test
 
@@ -457,7 +813,7 @@ app.use((req, res, next) => {
 - ❌ Timestamps disabled
 - ❌ Stack traces disabled
 - ✅ JSON format
-- ❌ All middleware disabled
+- ✅ Performance monitoring enabled
 
 ### Staging
 
@@ -466,14 +822,34 @@ app.use((req, res, next) => {
 - ✅ Timestamps enabled
 - ✅ Stack traces enabled
 - ✅ JSON format
-- ✅ Request/response logging
+- ✅ Performance monitoring enabled
 
 ## 📦 Exports
 
 ### Core Exports
 
 ```javascript
-import { ColorManager, createLogger, createNextJSLogger, Logger } from 'loghorn';
+import {
+  ColorManager,
+  createLogger,
+  createNextJSLogger,
+  createPerformanceLogger,
+  EdgeColorManager,
+  Logger,
+  PerformanceLogger,
+  PerformanceMonitor,
+} from 'loghorn';
+```
+
+### Performance Monitoring Types
+
+```javascript
+import type {
+  PerformanceLoggerConfig,
+  PerformanceConfig,
+  PerformanceMetric,
+  PerformanceStats
+} from 'loghorn';
 ```
 
 ### Convenience Methods
@@ -499,16 +875,6 @@ import {
 } from 'loghorn';
 ```
 
-### Middleware
-
-```javascript
-import {
-  createLoggingMiddleware,
-  createMorganMiddleware,
-  fastifyLoghorn,
-} from 'loghorn';
-```
-
 ### Configuration
 
 ```javascript
@@ -520,6 +886,61 @@ import {
   loadConfigFromEnv,
 } from 'loghorn';
 ```
+
+## 🚀 Performance Features
+
+### Memory Efficiency
+
+LogHorn uses object pooling to reduce memory allocations and garbage collection
+overhead:
+
+```javascript
+// Automatic object reuse for better performance
+const logger = createPerformanceLogger({
+  // Object pooling is enabled by default
+  // No additional configuration needed
+});
+```
+
+### Rate Limiting
+
+Built-in protection against log spam and DoS attacks:
+
+```javascript
+const logger = createLogger({
+  // Rate limiting is enabled by default
+  // Configurable limits for different log levels
+});
+```
+
+### Asynchronous Logging
+
+Non-blocking operations that don't impact your application's performance:
+
+```javascript
+// All logging operations are asynchronous
+logger.info("This won't block your application");
+logger.error('Error logging is also non-blocking');
+```
+
+### Edge Runtime Compatibility
+
+100% compatible with Next.js Edge Runtime:
+
+```javascript
+// Works perfectly in Edge Runtime
+// No Node.js APIs used
+// Optimized for serverless environments
+const logger = createLogger(); // Automatically detects Edge Runtime
+```
+
+## 📚 Documentation
+
+- **[Quick Start Guide](docs/QUICK_START.md)** - Get up and running in minutes
+- **[API Documentation](docs/API.md)** - Complete API reference
+- **[Best Practices](docs/BEST_PRACTICES.md)** - Guidelines for effective usage
+- **[Migration Guide](docs/MIGRATION.md)** - Migrate from other logging libraries
+- **[Examples](examples/README.md)** - Practical examples and demos
 
 ## 🤝 Contributing
 
@@ -534,7 +955,7 @@ details.
 ## 🙏 Acknowledgments
 
 - Built with TypeScript for type safety
-- Uses [chalk](https://github.com/chalk/chalk) for terminal colors
 - Uses [safe-stable-stringify](https://github.com/BridgeAR/safe-stable-stringify)
   for safe JSON serialization
+- Optimized for Next.js 15 and Edge Runtime
 - Inspired by modern logging practices and frameworks

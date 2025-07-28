@@ -17,6 +17,7 @@ node_modules
 
 # testing
 coverage
+.jest-cache
 
 # misc
 .DS_Store

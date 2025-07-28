@@ -3,10 +3,12 @@ import stringify from 'safe-stable-stringify';
 import type { LogContext, LogEntry, LoggerConfig, LogLevel } from '../types';
 import { ColorManager } from '../utils/colors';
 
+type ConsoleMethod = 'log' | 'error' | 'warn' | 'debug';
+
 export class Logger {
-  private config: LoggerConfig;
-  private colorManager: ColorManager;
-  private context: LogContext = {};
+  protected config: LoggerConfig;
+  protected colorManager: ColorManager;
+  protected context: LogContext = {};
 
   constructor(config: LoggerConfig) {
     this.config = config;
@@ -24,7 +26,7 @@ export class Logger {
     this.context = {};
   }
 
-  private shouldLog(level: LogLevel): boolean {
+  protected shouldLog(level: LogLevel): boolean {
     return this.config.logLevels[level]?.enabled ?? false;
   }
 
@@ -86,7 +88,7 @@ export class Logger {
    * Unified message formatting system
    * This is the central method for all log formatting across the library
    */
-  private formatMessage(
+  protected formatMessage(
     level: LogLevel,
     message: string,
     options?: {
@@ -234,12 +236,12 @@ export class Logger {
       structured['data'] = data;
     }
 
-    const indent =
-      typeof this.config.prettyJSON === 'number'
-        ? this.config.prettyJSON
-        : this.config.prettyJSON === true
-          ? 2
-          : 0;
+    let indent = 0;
+    if (typeof this.config.prettyJSON === 'number') {
+      indent = this.config.prettyJSON;
+    } else if (this.config.prettyJSON === true) {
+      indent = 2;
+    }
 
     const formatted = JSON.stringify(structured, null, indent);
     return { formatted, raw: message, structured };
@@ -273,6 +275,13 @@ export class Logger {
     return null;
   }
 
+  private getConsoleMethod(level: LogLevel): ConsoleMethod {
+    if (level === 'error') return 'error';
+    if (level === 'warn') return 'warn';
+    if (level === 'debug') return 'debug';
+    return 'log';
+  }
+
   private logToBrowserConsole(
     level: LogLevel,
     message: string,
@@ -280,58 +289,79 @@ export class Logger {
     logConfig?: any,
   ): void {
     try {
-      const consoleMethod =
-        level === 'error'
-          ? 'error'
-          : level === 'warn'
-            ? 'warn'
-            : level === 'debug'
-              ? 'debug'
-              : 'log';
-
-      // Use unified formatting system
+      const consoleMethod = this.getConsoleMethod(level);
       const { formatted } = this.formatMessage(level, message, {
         format: 'elegant',
       });
 
-      // Professional browser logging with structured data
       if (data !== undefined) {
-        // Use console.group for better data organization
-        if (typeof console.group === 'function') {
-          console.group(
-            `%c${formatted}`,
-            logConfig?.color && this.config.enableColors
-              ? `color: ${this.colorManager.getCSSColor(logConfig.color)}; font-weight: bold;`
-              : '',
-          );
-          console[consoleMethod](data);
-          console.groupEnd();
-        } else {
-          // Fallback for environments without console.group
-          if (logConfig?.color && this.config.enableColors) {
-            console[consoleMethod](
-              `%c${formatted}`,
-              `color: ${this.colorManager.getCSSColor(logConfig.color)}; font-weight: bold;`,
-            );
-          } else {
-            console[consoleMethod](formatted);
-          }
-          console[consoleMethod](data);
-        }
+        this.logWithData(consoleMethod, formatted, data, logConfig);
       } else {
-        // Simple message without data
-        if (logConfig?.color && this.config.enableColors) {
-          console[consoleMethod](
-            `%c${formatted}`,
-            `color: ${this.colorManager.getCSSColor(logConfig.color)}; font-weight: bold;`,
-          );
-        } else {
-          console[consoleMethod](formatted);
-        }
+        this.logWithoutData(consoleMethod, formatted, logConfig);
       }
     } catch (error) {
       // Fallback to simple logging if browser console fails
       console.log(`[${level.toUpperCase()}] ${message}`, data);
+    }
+  }
+
+  private logWithData(
+    consoleMethod: ConsoleMethod,
+    formatted: string,
+    data: unknown,
+    logConfig?: any,
+  ): void {
+    if (typeof console.group === 'function') {
+      this.logWithGroup(consoleMethod, formatted, data, logConfig);
+    } else {
+      this.logWithoutGroup(consoleMethod, formatted, data, logConfig);
+    }
+  }
+
+  private logWithGroup(
+    consoleMethod: ConsoleMethod,
+    formatted: string,
+    data: unknown,
+    logConfig?: any,
+  ): void {
+    let groupStyle = '';
+    if (logConfig?.color && this.config.enableColors) {
+      groupStyle = `color: ${this.colorManager.getCSSColor(logConfig.color)}; font-weight: bold;`;
+    }
+    console.group(`%c${formatted}`, groupStyle);
+    console[consoleMethod](data);
+    console.groupEnd();
+  }
+
+  private logWithoutGroup(
+    consoleMethod: ConsoleMethod,
+    formatted: string,
+    data: unknown,
+    logConfig?: any,
+  ): void {
+    if (logConfig?.color && this.config.enableColors) {
+      console[consoleMethod](
+        `%c${formatted}`,
+        `color: ${this.colorManager.getCSSColor(logConfig.color)}; font-weight: bold;`,
+      );
+    } else {
+      console[consoleMethod](formatted);
+    }
+    console[consoleMethod](data);
+  }
+
+  private logWithoutData(
+    consoleMethod: ConsoleMethod,
+    formatted: string,
+    logConfig?: any,
+  ): void {
+    if (logConfig?.color && this.config.enableColors) {
+      console[consoleMethod](
+        `%c${formatted}`,
+        `color: ${this.colorManager.getCSSColor(logConfig.color)}; font-weight: bold;`,
+      );
+    } else {
+      console[consoleMethod](formatted);
     }
   }
 
@@ -342,14 +372,7 @@ export class Logger {
     logConfig?: any,
   ): void {
     try {
-      const consoleMethod =
-        level === 'error'
-          ? 'error'
-          : level === 'warn'
-            ? 'warn'
-            : level === 'debug'
-              ? 'debug'
-              : 'log';
+      const consoleMethod = this.getConsoleMethod(level);
 
       // Use unified formatting system
       const { formatted } = this.formatMessage(level, message, {
@@ -369,17 +392,15 @@ export class Logger {
         }
         // Log data separately for better formatting
         console[consoleMethod](data);
-      } else {
+      } else if (logConfig?.color && this.config.enableColors) {
         // Apply colors to the entire message if enabled
-        if (logConfig?.color && this.config.enableColors) {
-          const coloredMessage = this.colorManager.colorize(
-            formatted,
-            logConfig.color,
-          );
-          console[consoleMethod](coloredMessage);
-        } else {
-          console[consoleMethod](formatted);
-        }
+        const coloredMessage = this.colorManager.colorize(
+          formatted,
+          logConfig.color,
+        );
+        console[consoleMethod](coloredMessage);
+      } else {
+        console[consoleMethod](formatted);
       }
     } catch (error) {
       // Fallback to simple logging if console fails
@@ -403,18 +424,16 @@ export class Logger {
           `[LOGHORN WARNING] JSON log entry too large (${jsonString.length} chars), truncating`,
         );
         console.log(jsonString.substring(0, MAX_JSON_SIZE) + '...');
-      } else {
+      } else if (this.config.enableColors) {
         // Apply colors to JSON output if enabled
-        if (this.config.enableColors) {
-          const logConfig = this.config.logLevels[level];
-          const coloredJson = this.colorManager.colorize(
-            jsonString,
-            logConfig?.color || 'log',
-          );
-          console.log(coloredJson);
-        } else {
-          console.log(jsonString);
-        }
+        const logConfig = this.config.logLevels[level];
+        const coloredJson = this.colorManager.colorize(
+          jsonString,
+          logConfig?.color || 'log',
+        );
+        console.log(coloredJson);
+      } else {
+        console.log(jsonString);
       }
     } catch (error) {
       // Fallback to simple logging if JSON serialization fails
@@ -494,6 +513,83 @@ export class Logger {
     this.info(`🏁 ${message}`, data);
   }
 
+  private executeGroupWithNativeSupport(
+    label: string,
+    fn: () => void | Promise<void>,
+    collapsed: boolean,
+    context: LogContext,
+  ): void {
+    if (collapsed && typeof console.groupCollapsed === 'function') {
+      console.groupCollapsed(label);
+    } else {
+      console.group(label);
+    }
+
+    const originalContext = { ...this.context };
+    this.setContext({ ...this.context, ...context });
+
+    try {
+      const result = fn();
+      if (result instanceof Promise) {
+        result
+          .catch((error: unknown) => {
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            this.error(`Group execution failed: ${errorMessage}`, error);
+          })
+          .finally(() => {
+            this.setContext(originalContext);
+            console.groupEnd();
+          });
+      } else {
+        this.setContext(originalContext);
+        console.groupEnd();
+      }
+    } catch (error: unknown) {
+      this.setContext(originalContext);
+      console.groupEnd();
+      throw error;
+    }
+  }
+
+  private executeGroupWithFallback(
+    label: string,
+    fn: () => void | Promise<void>,
+    context: LogContext,
+  ): void {
+    const indent = this.getGroupIndentation();
+    const groupContext = { ...this.context, ...context };
+
+    this.setContext(groupContext);
+    this.info(`${indent}📦 ${label}`);
+
+    try {
+      const result = fn();
+      if (result instanceof Promise) {
+        result
+          .catch((error: unknown) => {
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            this.error(
+              `${indent}  ❌ Group execution failed: ${errorMessage}`,
+              error,
+            );
+          })
+          .finally(() => {
+            this.setContext({ ...this.context });
+            this.info(`${indent}📦 End: ${label}`);
+          });
+      } else {
+        this.setContext({ ...this.context });
+        this.info(`${indent}📦 End: ${label}`);
+      }
+    } catch (error: unknown) {
+      this.setContext({ ...this.context });
+      this.info(`${indent}📦 End: ${label}`);
+      throw error;
+    }
+  }
+
   // Group logging for better organization
   group(
     label: string,
@@ -502,77 +598,10 @@ export class Logger {
   ): void {
     const { collapsed = false, context = {} } = options || {};
 
-    if (typeof console !== 'undefined' && console.group) {
-      // Browser/Node.js with native group support
-      if (collapsed && console.groupCollapsed) {
-        console.groupCollapsed(label);
-      } else {
-        console.group(label);
-      }
-
-      // Set group context if provided
-      const originalContext = { ...this.context };
-      this.setContext({ ...this.context, ...context });
-
-      try {
-        const result = fn();
-        if (result instanceof Promise) {
-          // Handle async function
-          result
-            .catch((error: unknown) => {
-              const errorMessage =
-                error instanceof Error ? error.message : String(error);
-              this.error(`Group execution failed: ${errorMessage}`, error);
-            })
-            .finally(() => {
-              this.setContext(originalContext);
-              console.groupEnd();
-            });
-        } else {
-          // Handle sync function
-          this.setContext(originalContext);
-          console.groupEnd();
-        }
-      } catch (error: unknown) {
-        this.setContext(originalContext);
-        console.groupEnd();
-        throw error;
-      }
+    if (typeof console !== 'undefined' && typeof console.group === 'function') {
+      this.executeGroupWithNativeSupport(label, fn, collapsed, context);
     } else {
-      // Fallback for environments without native group support
-      const indent = this.getGroupIndentation();
-      const groupContext = { ...this.context, ...context };
-
-      this.setContext(groupContext);
-      this.info(`${indent}📦 ${label}`);
-
-      try {
-        const result = fn();
-        if (result instanceof Promise) {
-          // Handle async function
-          result
-            .catch((error: unknown) => {
-              const errorMessage =
-                error instanceof Error ? error.message : String(error);
-              this.error(
-                `${indent}  ❌ Group execution failed: ${errorMessage}`,
-                error,
-              );
-            })
-            .finally(() => {
-              this.setContext({ ...this.context });
-              this.info(`${indent}📦 End: ${label}`);
-            });
-        } else {
-          // Handle sync function
-          this.setContext({ ...this.context });
-          this.info(`${indent}📦 End: ${label}`);
-        }
-      } catch (error: unknown) {
-        this.setContext({ ...this.context });
-        this.info(`${indent}📦 End: ${label}`);
-        throw error;
-      }
+      this.executeGroupWithFallback(label, fn, context);
     }
   }
 
@@ -593,48 +622,62 @@ export class Logger {
   ): Promise<T> {
     const { collapsed = false, context = {} } = options || {};
 
-    if (typeof console !== 'undefined' && console.group) {
-      // Browser/Node.js with native group support
-      if (collapsed && console.groupCollapsed) {
-        console.groupCollapsed(label);
-      } else {
-        console.group(label);
-      }
-
-      // Set group context if provided
-      const originalContext = { ...this.context };
-      this.setContext({ ...this.context, ...context });
-
-      try {
-        const result = await fn();
-        return result;
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        this.error(`Group execution failed: ${errorMessage}`, error);
-        throw error;
-      } finally {
-        this.setContext(originalContext);
-        console.groupEnd();
-      }
+    if (typeof console !== 'undefined' && typeof console.group === 'function') {
+      return this.executeAsyncGroupWithNativeSupport(label, fn, collapsed, context);
     } else {
-      // Fallback for environments without native group support
-      const indent = this.getGroupIndentation();
-      const groupContext = { ...this.context, ...context };
+      return this.executeAsyncGroupWithFallback(label, fn, context);
+    }
+  }
 
-      this.setContext(groupContext);
-      this.info(`${indent}📦 ${label}`);
+  private async executeAsyncGroupWithNativeSupport<T>(
+    label: string,
+    fn: () => Promise<T>,
+    collapsed: boolean,
+    context: LogContext,
+  ): Promise<T> {
+    if (collapsed && typeof console.groupCollapsed === 'function') {
+      console.groupCollapsed(label);
+    } else {
+      console.group(label);
+    }
 
-      try {
-        const result = await fn();
-        return result;
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        this.error(`${indent}  ❌ Group execution failed: ${errorMessage}`, error);
-        throw error;
-      } finally {
-        this.setContext({ ...this.context });
-        this.info(`${indent}📦 End: ${label}`);
-      }
+    const originalContext = { ...this.context };
+    this.setContext({ ...this.context, ...context });
+
+    try {
+      const result = await fn();
+      return result;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.error(`Group execution failed: ${errorMessage}`, error);
+      throw error;
+    } finally {
+      this.setContext(originalContext);
+      console.groupEnd();
+    }
+  }
+
+  private async executeAsyncGroupWithFallback<T>(
+    label: string,
+    fn: () => Promise<T>,
+    context: LogContext,
+  ): Promise<T> {
+    const indent = this.getGroupIndentation();
+    const groupContext = { ...this.context, ...context };
+
+    this.setContext(groupContext);
+    this.info(`${indent}📦 ${label}`);
+
+    try {
+      const result = await fn();
+      return result;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.error(`${indent}  ❌ Group execution failed: ${errorMessage}`, error);
+      throw error;
+    } finally {
+      this.setContext({ ...this.context });
+      this.info(`${indent}📦 End: ${label}`);
     }
   }
 
@@ -820,65 +863,80 @@ export class Logger {
     }
   }
 
+  private collectTableKeys(objects: Record<string, unknown>[]): string[] {
+    const allKeys = new Set<string>();
+
+    for (const item of objects) {
+      try {
+        Object.keys(item).forEach((key) => allKeys.add(key));
+      } catch (error) {
+        // Skip problematic objects
+        console.warn('[LOGHORN WARNING] Skipping problematic object:', error);
+      }
+    }
+
+    const keys = Array.from(allKeys);
+    if (keys.length === 0) {
+      return [];
+    }
+
+    // Safety check: limit number of columns
+    const MAX_COLUMNS = 20;
+    if (keys.length > MAX_COLUMNS) {
+      console.log(
+        `(too many columns: ${keys.length}, showing first ${MAX_COLUMNS})`,
+      );
+      keys.splice(MAX_COLUMNS);
+    }
+
+    return keys;
+  }
+
+  private calculateColumnWidths(
+    keys: string[],
+    objects: Record<string, unknown>[],
+  ): Record<string, number> {
+    const columnWidths: Record<string, number> = {};
+    keys.forEach((key) => {
+      columnWidths[key] = key.length;
+    });
+
+    // Find max widths with safety limits
+    const MAX_COLUMN_WIDTH = 50;
+    for (const item of objects) {
+      try {
+        for (const key of keys) {
+          if (key) {
+            const value = item[key];
+            const strValue = this.safeStringify(value);
+            const width = Math.min(strValue.length, MAX_COLUMN_WIDTH);
+            columnWidths[key] = Math.max(columnWidths[key] || 0, width);
+          }
+        }
+      } catch (error) {
+        // Skip problematic items
+      }
+    }
+
+    return columnWidths;
+  }
+
   private printObjectTable(objects: Record<string, unknown>[]): void {
     try {
-      // Array of objects - collect all unique keys from all objects
-      const allKeys = new Set<string>();
-
-      for (const item of objects) {
-        try {
-          Object.keys(item).forEach((key) => allKeys.add(key));
-        } catch (error) {
-          // Skip problematic objects
-          console.warn('[LOGHORN WARNING] Skipping problematic object:', error);
-        }
-      }
-
-      const keys = Array.from(allKeys);
+      const keys = this.collectTableKeys(objects);
       if (keys.length === 0) {
         console.log('(empty objects)');
         return;
       }
 
-      // Safety check: limit number of columns
-      const MAX_COLUMNS = 20;
-      if (keys.length > MAX_COLUMNS) {
-        console.log(
-          `(too many columns: ${keys.length}, showing first ${MAX_COLUMNS})`,
-        );
-        keys.splice(MAX_COLUMNS);
-      }
-
-      // Calculate column widths
-      const columnWidths: Record<string, number> = {};
-      keys.forEach((key) => {
-        columnWidths[key] = key.length;
-      });
-
-      // Find max widths with safety limits
-      const MAX_COLUMN_WIDTH = 50;
-      for (const item of objects) {
-        try {
-          for (const key of keys) {
-            if (key) {
-              const value = item[key];
-              const strValue = this.safeStringify(value);
-              const width = Math.min(strValue.length, MAX_COLUMN_WIDTH);
-              columnWidths[key] = Math.max(columnWidths[key] || 0, width);
-            }
-          }
-        } catch (error) {
-          // Skip problematic items
-        }
-      }
+      const columnWidths = this.calculateColumnWidths(keys, objects);
 
       // Print header
       this.printTableHeader(keys, columnWidths);
 
       // Print rows
-      for (let i = 0; i < objects.length; i++) {
+      for (const item of objects) {
         try {
-          const item = objects[i];
           if (item) {
             this.printTableRow(item, keys, columnWidths);
           }
@@ -988,7 +1046,8 @@ export class Logger {
           ? str.substring(0, MAX_STRING_LENGTH) + '...'
           : str;
       }
-      const str = String(value);
+      // For non-objects, use proper string conversion
+      const str = this.convertToString(value);
       const MAX_STRING_LENGTH = 100;
       return str.length > MAX_STRING_LENGTH
         ? str.substring(0, MAX_STRING_LENGTH) + '...'
@@ -996,6 +1055,21 @@ export class Logger {
     } catch (error) {
       return '[ERROR]';
     }
+  }
+
+  private convertToString(value: unknown): string {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number') return value.toString();
+    if (typeof value === 'boolean') return value.toString();
+    if (typeof value === 'symbol') return value.toString();
+    if (typeof value === 'bigint') return value.toString();
+    if (typeof value === 'function') return '[Function]';
+    // For any other type, use JSON.stringify with a replacer function
+    return JSON.stringify(value, (_, val) => {
+      if (typeof val === 'function') return '[Function]';
+      if (typeof val === 'symbol') return '[Symbol]';
+      return val;
+    });
   }
 
   private formatTableFromObject(data: Record<string, unknown>): void {

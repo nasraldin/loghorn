@@ -3,3 +3,4 @@ dist
 package
 .history
 pnpm-lock.yaml
+docs/QUICK_START.md

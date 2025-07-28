@@ -170,19 +170,6 @@ describe('Configuration', () => {
       expect(config.logLevels.info.enabled).toBe(true); // Should keep default
     });
 
-    test('should merge middleware config', () => {
-      const customMiddleware = {
-        enabled: true,
-        logRequests: false,
-        logResponses: true,
-        logErrors: true,
-        excludePaths: ['/health'],
-      };
-
-      const config = createLoggerConfig({ middleware: customMiddleware });
-      expect(config.middleware).toMatchObject(customMiddleware);
-    });
-
     test('should handle missing env vars gracefully', () => {
       // Reset environment to ensure no env vars are set
       const originalEnv = { ...process.env };
@@ -211,10 +198,6 @@ describe('Configuration', () => {
       expect(config.enableColors).toBe(false);
       expect(config.enableEmojis).toBe(false);
       expect(config.enableJSON).toBe(true);
-      expect(config.middleware?.enabled).toBe(true);
-      expect(config.middleware?.logRequests).toBe(false);
-      expect(config.middleware?.logResponses).toBe(false);
-      expect(config.middleware?.logErrors).toBe(true);
     });
 
     test('createLoggerConfig with staging environment', () => {
@@ -223,10 +206,6 @@ describe('Configuration', () => {
       expect(config.enableColors).toBe(true);
       expect(config.enableEmojis).toBe(true);
       expect(config.enableJSON).toBe(true);
-      expect(config.middleware?.enabled).toBe(true);
-      expect(config.middleware?.logRequests).toBe(true);
-      expect(config.middleware?.logResponses).toBe(true);
-      expect(config.middleware?.logErrors).toBe(true);
     });
 
     test('createLoggerConfig with test environment', () => {
@@ -235,10 +214,6 @@ describe('Configuration', () => {
       expect(config.enableColors).toBe(false);
       expect(config.enableEmojis).toBe(false);
       expect(config.enableJSON).toBe(true);
-      expect(config.middleware?.enabled).toBe(false);
-      expect(config.middleware?.logRequests).toBe(false);
-      expect(config.middleware?.logResponses).toBe(false);
-      expect(config.middleware?.logErrors).toBe(false);
     });
 
     test('createLoggerConfig with development environment', () => {
@@ -249,39 +224,8 @@ describe('Configuration', () => {
       expect(config.enableTimestamps).toBe(true);
       expect(config.enableStackTraces).toBe(true);
       expect(config.enableJSON).toBe(false);
-      expect(config.middleware?.enabled).toBe(true);
-      expect(config.middleware?.logRequests).toBe(true);
-      expect(config.middleware?.logResponses).toBe(true);
-      expect(config.middleware?.logErrors).toBe(true);
-      expect(config.middleware?.excludePaths).toEqual(['/health', '/metrics']);
       expect(config.logLevels?.debug.enabled).toBe(true);
       expect(config.logLevels?.trace.enabled).toBe(true);
-    });
-
-    test('createLoggerConfig merges middleware and logLevels overrides', () => {
-      const config = createLoggerConfig({
-        environment: 'development',
-        middleware: {
-          enabled: true,
-          logRequests: false,
-          logResponses: true,
-          logErrors: true,
-          excludePaths: ['/custom'],
-        },
-        logLevels: {
-          debug: { ...DEFAULT_LOG_LEVELS.debug, enabled: true },
-          info: { ...DEFAULT_LOG_LEVELS.info, enabled: false },
-          warn: { ...DEFAULT_LOG_LEVELS.warn, enabled: true },
-          error: { ...DEFAULT_LOG_LEVELS.error, enabled: true },
-          trace: { ...DEFAULT_LOG_LEVELS.trace, enabled: true },
-          log: { ...DEFAULT_LOG_LEVELS.log, enabled: true },
-        },
-      });
-      expect(config.middleware?.enabled).toBe(true); // from override
-      expect(config.middleware?.logRequests).toBe(false); // override
-      expect(config.middleware?.excludePaths).toEqual(['/custom']); // override
-      expect(config.logLevels?.info.enabled).toBe(false); // override
-      expect(config.logLevels?.debug.enabled).toBe(true); // override
     });
 
     test('createLoggerConfig uses default values when baseConfig properties are undefined', () => {
@@ -293,11 +237,6 @@ describe('Configuration', () => {
       expect(config.enableTimestamps).toBe(true); // default
       expect(config.enableStackTraces).toBe(true); // default
       expect(config.enableJSON).toBe(true); // default
-      expect(config.middleware?.enabled).toBe(true); // default
-      expect(config.middleware?.logRequests).toBe(true); // default
-      expect(config.middleware?.logResponses).toBe(true); // default
-      expect(config.middleware?.logErrors).toBe(true); // default
-      expect(config.middleware?.excludePaths).toEqual([]); // default
       expect(config.logLevels?.info.enabled).toBe(true); // default
       expect(config.logLevels?.debug.enabled).toBe(true); // default
       expect(config.logLevels?.warn.enabled).toBe(true); // default
@@ -340,23 +279,6 @@ describe('Configuration', () => {
       expect(config.logLevels?.debug.enabled).toBe(false);
       expect(config.logLevels?.info.enabled).toBe(true);
       expect(config.logLevels?.warn.enabled).toBe(false);
-    });
-
-    test('should load middleware configuration', () => {
-      process.env['LOGHORN_MIDDLEWARE_ENABLED'] = 'true';
-      process.env['LOGHORN_MIDDLEWARE_LOG_REQUESTS'] = 'false';
-      process.env['LOGHORN_MIDDLEWARE_LOG_RESPONSES'] = 'true';
-      process.env['LOGHORN_MIDDLEWARE_LOG_ERRORS'] = 'true';
-      process.env['LOGHORN_MIDDLEWARE_EXCLUDE_PATHS'] = '/health,/metrics';
-
-      const config = loadConfigFromEnv();
-      expect(config.middleware).toMatchObject({
-        enabled: true,
-        logRequests: false,
-        logResponses: true,
-        logErrors: true,
-        excludePaths: ['/health', '/metrics'],
-      });
     });
 
     test('should handle missing env vars gracefully', () => {
@@ -430,37 +352,6 @@ describe('Configuration', () => {
       process.env = origEnv;
     });
 
-    test('loadConfigFromEnv loads middleware config', () => {
-      const originalEnv = process.env;
-      process.env = {
-        ...originalEnv,
-        LOGHORN_MIDDLEWARE_ENABLED: 'true',
-        LOGHORN_MIDDLEWARE_LOG_REQUESTS: 'true',
-        LOGHORN_MIDDLEWARE_LOG_RESPONSES: 'false',
-        LOGHORN_MIDDLEWARE_LOG_ERRORS: 'true',
-        LOGHORN_MIDDLEWARE_EXCLUDE_PATHS: '/health,/metrics',
-      };
-      const config = require('../lib/config').loadConfigFromEnv();
-      expect(config.middleware?.enabled).toBe(true);
-      expect(config.middleware?.logRequests).toBe(true);
-      expect(config.middleware?.logResponses).toBe(false);
-      expect(config.middleware?.logErrors).toBe(true);
-      expect(config.middleware?.excludePaths).toEqual(['/health', '/metrics']);
-      process.env = originalEnv;
-    });
-
-    test('loadConfigFromEnv handles empty middleware exclude paths', () => {
-      const originalEnv = process.env;
-      process.env = {
-        ...originalEnv,
-        LOGHORN_MIDDLEWARE_ENABLED: 'true',
-        LOGHORN_MIDDLEWARE_EXCLUDE_PATHS: '',
-      };
-      const config = require('../lib/config').loadConfigFromEnv();
-      expect(config.middleware?.excludePaths).toEqual(['']);
-      process.env = originalEnv;
-    });
-
     test('loadConfigFromEnv loads specific log level configs', () => {
       const originalEnv = process.env;
       process.env = {
@@ -479,23 +370,6 @@ describe('Configuration', () => {
       expect(config.logLevels?.error.enabled).toBe(true);
       expect(config.logLevels?.trace.enabled).toBe(false);
       expect(config.logLevels?.log.enabled).toBe(true);
-      process.env = originalEnv;
-    });
-
-    test('loadConfigFromEnv handles middleware config with undefined values', () => {
-      const originalEnv = process.env;
-      process.env = {
-        ...originalEnv,
-        LOGHORN_MIDDLEWARE_ENABLED: 'true',
-        LOGHORN_MIDDLEWARE_LOG_REQUESTS: undefined,
-        LOGHORN_MIDDLEWARE_LOG_RESPONSES: undefined,
-        LOGHORN_MIDDLEWARE_LOG_ERRORS: undefined,
-      };
-      const config = require('../lib/config').loadConfigFromEnv();
-      expect(config.middleware?.enabled).toBe(true);
-      expect(config.middleware?.logRequests).toBe(false);
-      expect(config.middleware?.logResponses).toBe(false);
-      expect(config.middleware?.logErrors).toBe(false);
       process.env = originalEnv;
     });
 
@@ -531,7 +405,6 @@ describe('Configuration', () => {
         enableStackTraces: true,
         enableJSON: false,
       });
-      expect(devConfig.middleware?.enabled).toBe(true);
     });
 
     test('should have correct production config', () => {
@@ -543,7 +416,6 @@ describe('Configuration', () => {
         enableStackTraces: false,
         enableJSON: true,
       });
-      expect(prodConfig.middleware?.enabled).toBe(true);
     });
 
     test('should have correct test config', () => {
@@ -555,7 +427,6 @@ describe('Configuration', () => {
         enableStackTraces: false,
         enableJSON: true,
       });
-      expect(testConfig.middleware?.enabled).toBe(false);
     });
 
     test('should have correct staging config', () => {
@@ -567,7 +438,6 @@ describe('Configuration', () => {
         enableStackTraces: true,
         enableJSON: true,
       });
-      expect(stagingConfig.middleware?.enabled).toBe(true);
     });
   });
 

@@ -1,8 +1,8 @@
 {
   "name": "loghorn",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "author": "Nasr Aldin <ns@nasraldin.com> (https://nasraldin.com)",
-  "description": "A powerful, flexible, and production-ready logging library for Node.js and browsers with support for multiple frameworks and environments.",
+  "description": "A powerful, flexible, and production-ready logging library for Next.js with Edge Runtime support.",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,21 +11,19 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "jest",
+    "test:fast": "jest --maxWorkers=4 --maxConcurrency=4 --cache --watchman=false --verbose=false",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --coverageReporters=html --coverageReporters=text",
-    "lint": "eslint",
-    "lint:fix": "eslint --quiet --fix",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --quiet --fix",
     "format": "prettier --write --list-different .",
     "clean": "rm -rf dist",
-    "prepublishOnly": "npm run clean && npm run build"
+    "prepublishOnly": "npm run clean && npm run build",
+    "type-check": "tsc --noEmit --skipLibCheck"
   },
   "dependencies": {
     "chalk": "^5.4.1",
-    "express": "5.1.0",
-    "fastify": "5.4.0",
-    "morgan": "^1.10.1",
-    "safe-stable-stringify": "^2.5.0",
-    "uuid": "^11.1.0"
+    "safe-stable-stringify": "^2.5.0"
   },
   "devDependencies": {
     "@commitlint/cli": "19.8.1",
@@ -33,10 +31,8 @@
     "@eslint/eslintrc": "3.3.1",
     "@eslint/js": "9.32.0",
     "@ianvs/prettier-plugin-sort-imports": "4.5.1",
-    "@types/express": "^5.0.3",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.1.0",
-    "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.38.0",
     "@typescript-eslint/parser": "^8.38.0",
     "eslint": "^9.32.0",
@@ -53,10 +49,6 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "8.38.0"
   },
-  "peerDependencies": {
-    "express": ">=4.0.0",
-    "fastify": ">=4.0.0"
-  },
   "files": [
     "dist",
     "README.md"
@@ -72,16 +64,9 @@
   "keywords": [
     "logging",
     "logger",
-    "nodejs",
     "typescript",
-    "express",
-    "fastify",
-    "nestjs",
-    "react",
     "nextjs",
-    "vue",
-    "angular",
-    "middleware",
+    "edge-runtime",
     "debug",
     "colorful",
     "environment",

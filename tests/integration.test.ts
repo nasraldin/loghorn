@@ -2,12 +2,10 @@ import {
   ColorManager,
   createLogger,
   createLoggerConfig,
-  createLoggingMiddleware,
   debug,
   end,
   error,
   failure,
-  fastifyLoghorn,
   getEnvironment,
   group,
   info,
@@ -23,6 +21,7 @@ import {
   warn,
 } from '../lib';
 import {
+  cleanupLogger,
   clearCapturedLogs,
   getCapturedDebugs,
   getCapturedErrors,
@@ -64,11 +63,6 @@ describe('Integration Tests', () => {
       expect(createLoggerConfig).toBeDefined();
       expect(loadConfigFromEnv).toBeDefined();
       expect(getEnvironment).toBeDefined();
-    });
-
-    test('should export middleware', () => {
-      expect(createLoggingMiddleware).toBeDefined();
-      expect(fastifyLoghorn).toBeDefined();
     });
   });
 
@@ -120,7 +114,7 @@ describe('Integration Tests', () => {
       expect(customLogger).toBeInstanceOf(Logger);
     });
 
-    test('should create logger with custom config', () => {
+    test('should create logger with custom config', async () => {
       const customLogger = createLogger({
         environment: 'production',
         enableColors: false,
@@ -133,6 +127,9 @@ describe('Integration Tests', () => {
       expect(config.environment).toBe('production');
       expect(config.enableColors).toBe(false);
       expect(config.enableEmojis).toBe(false);
+
+      // Clean up the logger
+      await cleanupLogger(customLogger);
     });
 
     test('should load environment variables', () => {
@@ -153,12 +150,12 @@ describe('Integration Tests', () => {
   });
 
   describe('Configuration Integration', () => {
-    test('should create config with environment overrides', () => {
+    test('should create config with environment overrides', async () => {
       const config = createLoggerConfig({
         environment: 'production',
         logLevels: {
           debug: { level: 'debug', color: '#000', emoji: '🐛', enabled: false },
-          info: { level: 'info', color: '#000', emoji: 'ℹ️', enabled: true },
+          info: { level: 'info', color: '#000', emoji: '💡', enabled: true },
           warn: { level: 'warn', color: '#000', emoji: '⚠️', enabled: true },
           error: { level: 'error', color: '#000', emoji: '❌', enabled: true },
           trace: { level: 'trace', color: '#000', emoji: '🔍', enabled: false },
@@ -174,6 +171,9 @@ describe('Integration Tests', () => {
 
       expect(getCapturedDebugs()).toHaveLength(0);
       expect(getCapturedLogs().length).toBeLessThanOrEqual(1);
+
+      // Clean up the logger
+      await cleanupLogger(logger);
     });
 
     test('should handle JSON logging', () => {
@@ -211,22 +211,6 @@ describe('Integration Tests', () => {
     });
   });
 
-  describe('Middleware Integration', () => {
-    test('should create express middleware', () => {
-      const middleware = createLoggingMiddleware(logger);
-      expect(typeof middleware).toBe('function');
-    });
-
-    test('should create fastify plugin', () => {
-      const fastify = {
-        addHook: jest.fn(),
-      } as any;
-
-      fastifyLoghorn(fastify, logger);
-      expect(fastify.addHook).toHaveBeenCalled();
-    });
-  });
-
   describe('Environment Detection', () => {
     test('should detect environment correctly', () => {
       const env = getEnvironment();
@@ -255,7 +239,7 @@ describe('Integration Tests', () => {
               emoji: '🐛',
               enabled: true,
             },
-            info: { level: 'info', color: '#000', emoji: 'ℹ️', enabled: true },
+            info: { level: 'info', color: '#000', emoji: '💡', enabled: true },
             warn: { level: 'warn', color: '#000', emoji: '⚠️', enabled: true },
             error: {
               level: 'error',
